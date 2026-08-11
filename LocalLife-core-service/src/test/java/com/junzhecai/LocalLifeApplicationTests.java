@@ -25,7 +25,7 @@ import static com.junzhecai.utils.RedisConstants.CACHE_SHOP_KEY;
 import static com.junzhecai.utils.RedisConstants.SHOP_GEO_KEY;
 
 @SpringBootTest
-class HmDianPingApplicationTests {
+class LocalLifeApplicationTests {
 
     @Resource
     private CacheClient cacheClient;
