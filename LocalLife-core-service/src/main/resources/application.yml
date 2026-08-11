@@ -2,7 +2,7 @@ server:
   port: 8081
 spring:
   application:
-    name: hmdp-plus
+    name: LocalLife
   main:
     allow-bean-definition-overriding: true
     allow-circular-references: true  
