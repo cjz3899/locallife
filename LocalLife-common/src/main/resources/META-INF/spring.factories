@@ -1,0 +1,4 @@
+org.springframework.boot.env.EnvironmentPostProcessor=\
+  com.junzhecai.environment.SpringEnvironment
+org.springframework.context.ApplicationContextInitializer=\
+  com.junzhecai.core.SpringUtil

@@ -1,0 +1,78 @@
+# ===== Maven =====
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+.flattened-pom.xml
+
+# ===== Java =====
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+
+# ===== 编译输出 =====
+out/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# ===== 日志 =====
+logs/
+*.log
+*.hprof
+
+# ===== 操作系统 =====
+.DS_Store
+Thumbs.db
+
+# ===== IntelliJ IDEA =====
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# ===== Eclipse / STS =====
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# ===== NetBeans =====
+/nbproject/private/
+/nbbuild/
+/nbdist/
+/.nb-gradle/
+
+# ===== VS Code =====
+.vscode/
+
+# ===== 本地环境配置 =====
+*.local
+*.orig
+*.rej
+
+# ===== 文件补丁/备份 =====
+*.patch
+*.bak
+*.tmp
+
+# ===== IDE 生成的文档 =====
+HELP.md
+
+# ===== 其他 =====
+CLAUDE.md

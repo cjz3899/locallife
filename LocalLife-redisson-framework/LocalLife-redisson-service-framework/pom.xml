@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.junzhecai</groupId>
+        <artifactId>LocalLife-redisson-framework</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>LocalLife-redisson-service-framework</artifactId>
+    <name>LocalLife-redisson-service-framework</name>
+    <description>分布式服务工具</description>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>LocalLife-bloom-filter-framework</module>
+        <module>LocalLife-redisson-common-framework</module>
+		<module>LocalLife-service-lock-framework</module>
+        <module>LocalLife-repeat-execute-limit-framework</module>
+    </modules>
+
+</project>
