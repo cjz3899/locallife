@@ -1,11 +1,12 @@
 server:
-  port: 8081
+  port: 8080
 spring:
   application:
     name: LocalLife
   main:
     allow-bean-definition-overriding: true
-    allow-circular-references: true  
+    allow-circular-references: true
+
   datasource:
     driver-class-name: org.apache.shardingsphere.driver.ShardingSphereDriver
     url: jdbc:shardingsphere:classpath:shardingsphere.yaml
@@ -18,7 +19,7 @@ spring:
     pathmatch:
       matching-strategy: ant_path_matcher
     servlet:
-      load-on-startup: 1    
+      load-on-startup: 1
   jackson:
     default-property-inclusion: non_null # JSON处理时忽略非空字段
     time-zone: GMT+8
@@ -44,7 +45,7 @@ spring:
       # none:只要有一个分区不存在已提交的offset,就抛出异常;
       auto-offset-reset: latest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer  
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 mybatis-plus:
   type-aliases-package: com.junzhecai.entity # 别名扫描包
   configuration:

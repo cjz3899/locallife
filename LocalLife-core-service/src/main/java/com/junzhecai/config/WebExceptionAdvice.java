@@ -1,11 +1,11 @@
 package com.junzhecai.config;
 
+import com.junzhecai.dto.Result;
+import com.junzhecai.exception.ArgumentError;
+import com.junzhecai.exception.LocalLifeFrameException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import com.junzhecai.dto.Result;
-import com.junzhecai.exception.ArgumentError;
-import com.junzhecai.exception.HmdpFrameException;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -17,15 +17,17 @@ import java.util.stream.Collectors;
 @Slf4j
 @RestControllerAdvice
 public class WebExceptionAdvice {
-    
+
     /**
      * 业务异常
-     * */
-    @ExceptionHandler(value = HmdpFrameException.class)
-    public Result<String> toolkitExceptionHandler(HttpServletRequest request, HmdpFrameException hmdpFrameException) {
-        log.error("业务异常 method : {} url : {} query : {} ", request.getMethod(), getRequestUrl(request), getRequestQuery(request), hmdpFrameException);
-        return Result.fail( hmdpFrameException.getMessage());
+     *
+     */
+    @ExceptionHandler(value = LocalLifeFrameException.class)
+    public Result<String> toolkitExceptionHandler(HttpServletRequest request, LocalLifeFrameException localLifeFrameException) {
+        log.error("业务异常 method : {} url : {} query : {} ", request.getMethod(), getRequestUrl(request), getRequestQuery(request), localLifeFrameException);
+        return Result.fail(localLifeFrameException.getMessage());
     }
+
     /**
      * 参数验证异常
      */
@@ -45,7 +47,7 @@ public class WebExceptionAdvice {
                         }).collect(Collectors.toList());
         return Result.fail(argumentErrorList);
     }
-    
+
     /**
      * 拦截未捕获异常
      */
@@ -54,12 +56,12 @@ public class WebExceptionAdvice {
         log.error("全局异常 method : {} url : {} query : {} ", request.getMethod(), getRequestUrl(request), getRequestQuery(request), throwable);
         return Result.fail();
     }
-    
+
     private String getRequestUrl(HttpServletRequest request) {
         return request.getRequestURL().toString();
     }
-    
-    private String getRequestQuery(HttpServletRequest request){
+
+    private String getRequestQuery(HttpServletRequest request) {
         return request.getQueryString();
     }
 }

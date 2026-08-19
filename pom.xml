@@ -16,7 +16,7 @@
         <module>LocalLife-core-service</module>
         <module>LocalLife-redisson-framework</module>
         <module>LocalLife-redis-tool-framework</module>
-        <module>LocalLife-generator-framework</module>
+        <module>LocalLife-id-generator-framework</module>
         <module>LocalLife-mq-framework</module>
         <module>LocalLife-parameter</module>
     </modules>

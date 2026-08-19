@@ -8,12 +8,12 @@
         <artifactId>LocalLife</artifactId>
         <version>${revision}</version>
     </parent>
-    
-    <artifactId>LocalLife-generator-framework</artifactId>
+
+    <artifactId>LocalLife-id-generator-framework</artifactId>
 
     <name>LocalLife-generator-framework</name>
     <description>分布式id生成器</description>
-    
+
     <dependencies>
         <!-- Apache Commons -->
         <dependency>

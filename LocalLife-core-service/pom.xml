@@ -90,7 +90,7 @@
         </dependency>
         <dependency>
             <groupId>com.junzhecai</groupId>
-            <artifactId>LocalLife-generator-framework</artifactId>
+            <artifactId>LocalLife-id-generator-framework</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>

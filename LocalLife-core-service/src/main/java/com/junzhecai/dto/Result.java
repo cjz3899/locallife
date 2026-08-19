@@ -1,9 +1,9 @@
 package com.junzhecai.dto;
 
+import com.junzhecai.enums.BaseCode;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import com.junzhecai.enums.BaseCode;
 
 @Data
 @NoArgsConstructor
@@ -14,37 +14,42 @@ public class Result<T> {
     private T data;
     private Long total;
 
-    public static <T> Result<T> ok(){
-        Result<T> result = new Result<T>();
+    public static <T> Result<T> ok() {
+        Result<T> result = new Result<>();
         result.setSuccess(true);
         return result;
     }
-    public static <T> Result<T> ok(T data){
-        Result<T> result = new Result<T>();
+
+    public static <T> Result<T> ok(T data) {
+        Result<T> result = new Result<>();
         result.setSuccess(true);
         result.setData(data);
         return result;
     }
-    public static <T> Result<T> fail(){
-        Result<T> result = new Result<T>();
+
+    public static <T> Result<T> fail() {
+        Result<T> result = new Result<>();
         result.setSuccess(false);
         result.setErrorMsg("系统错误，请稍后重试!");
         return result;
     }
-    public static <T> Result<T> fail(String errorMsg){
-        Result<T> result = new Result<T>();
+
+    public static <T> Result<T> fail(String errorMsg) {
+        Result<T> result = new Result<>();
         result.setSuccess(false);
         result.setErrorMsg(errorMsg);
         return result;
     }
-    public static <T> Result<T> fail(T data){
-        Result<T> result = new Result<T>();
+
+    public static <T> Result<T> fail(T data) {
+        Result<T> result = new Result<>();
         result.setSuccess(false);
         result.setData(data);
         return result;
     }
-    public static <T> Result<T> fail(BaseCode baseCode){
-        Result<T> result = new Result<T>();
+
+    public static <T> Result<T> fail(BaseCode baseCode) {
+        Result<T> result = new Result<>();
         result.setSuccess(false);
         result.setErrorMsg(baseCode.getMsg());
         return result;
