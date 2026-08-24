@@ -10,9 +10,9 @@ import java.util.Map;
 import java.util.UUID;
 
 @Data
-@NoArgsConstructor(force = true)
+@NoArgsConstructor(force = true)//lombok生成无参构造函数时，将所有final属性初始化
 @AllArgsConstructor
-@RequiredArgsConstructor
+@RequiredArgsConstructor//lombok生成一个构造函数，该构造函数包含所有final属性和@NonNull属性
 public final class MessageExtend<T> implements Serializable {
 
     @Serial
