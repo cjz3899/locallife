@@ -2,23 +2,30 @@ package com.junzhecai.controller;
 
 import com.junzhecai.dto.GetSeckillVoucherDto;
 import com.junzhecai.dto.Result;
+import com.junzhecai.dto.UpdateSeckillVoucherDto;
 import com.junzhecai.model.SeckillVoucherFullModel;
 import com.junzhecai.service.ISeckillVoucherService;
+import com.junzhecai.service.IVoucherService;
+import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/voucher")
 public class VoucherController {
-    @Autowired
+    @Resource
     private ISeckillVoucherService seckillVoucherService;
+    @Resource
+    private IVoucherService voucherService;
 
     @GetMapping("/get")
     public Result<SeckillVoucherFullModel> get(@Valid @RequestBody GetSeckillVoucherDto getSeckillVoucherDto) {
         return Result.ok(seckillVoucherService.queryByVoucherId(getSeckillVoucherDto.getVoucherId()));
+    }
+
+    @PostMapping("/update/seckill")
+    public Result<Void> updateSeckillVoucher(@Valid @RequestBody UpdateSeckillVoucherDto updateSeckillVoucherDto) {
+        voucherService.updateSeckillVoucher(updateSeckillVoucherDto);
+        return Result.ok();
     }
 }

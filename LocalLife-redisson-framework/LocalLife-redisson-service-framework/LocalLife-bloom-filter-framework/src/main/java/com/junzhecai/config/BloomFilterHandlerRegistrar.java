@@ -2,6 +2,7 @@ package com.junzhecai.config;
 
 import cn.hutool.core.collection.CollectionUtil;
 import com.junzhecai.handler.BloomFilterHandler;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
@@ -28,12 +29,14 @@ public class BloomFilterHandlerRegistrar implements BeanDefinitionRegistryPostPr
     }
 
     @Override
-    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
+    public void postProcessBeanDefinitionRegistry(@NonNull BeanDefinitionRegistry registry) throws BeansException {
+        //解析配置，从配置中读取bloom-filter.filters的映射，k：业务名，v：过滤器
         Map<String, BloomFilterProperties.Filter> filters = resolveFiltersFromEnvironment();
         if (CollectionUtil.isEmpty(filters)) {
             return;
         }
         filters.forEach((alias, cfg) -> {
+            //获取Bean别名
             String beanName = StringUtils.hasText(cfg.getName()) ? cfg.getName() : alias;
 
             RootBeanDefinition bd = new RootBeanDefinition(BloomFilterHandler.class);
@@ -50,10 +53,11 @@ public class BloomFilterHandlerRegistrar implements BeanDefinitionRegistryPostPr
     }
 
     @Override
-    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+    public void postProcessBeanFactory(@NonNull ConfigurableListableBeanFactory beanFactory) throws BeansException {
         // no-op
     }
 
+    //最高优先级
     @Override
     public int getOrder() {
         return Ordered.HIGHEST_PRECEDENCE;

@@ -1,5 +1,6 @@
 package com.junzhecai.init;
 
+import com.junzhecai.cache.SeckillVoucherLocalCache;
 import com.junzhecai.core.RedisKeyManage;
 import com.junzhecai.entity.SeckillVoucher;
 import com.junzhecai.entity.Shop;

@@ -7,7 +7,7 @@ import java.util.Map;
 
 //布隆过滤器配置属性
 @Data
-@ConfigurationProperties(prefix = BloomFilterProperties.PREFIX)
+@ConfigurationProperties(prefix = BloomFilterProperties.PREFIX)//与配置文件中的前缀对应
 public class BloomFilterProperties {
 
     public static final String PREFIX = "bloom-filter";

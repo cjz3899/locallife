@@ -13,7 +13,6 @@
     <artifactId>LocalLife-core-service</artifactId>
 
     <name>LocalLife-core-service</name>
-    <description>黑马点评核心服务</description>
     <dependencies>
         <dependency>
             <groupId>com.junzhecai</groupId>

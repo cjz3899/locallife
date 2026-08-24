@@ -1,7 +1,6 @@
 package com.junzhecai.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import lombok.extern.slf4j.Slf4j;
 import com.junzhecai.dto.CancelVoucherOrderDto;
 import com.junzhecai.dto.GetVoucherOrderByVoucherIdDto;
 import com.junzhecai.dto.GetVoucherOrderDto;
@@ -9,6 +8,7 @@ import com.junzhecai.dto.Result;
 import com.junzhecai.entity.VoucherOrder;
 import com.junzhecai.mapper.VoucherOrderMapper;
 import com.junzhecai.service.IVoucherOrderService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.LinkedBlockingQueue;
@@ -20,8 +20,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 @Service
 public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, VoucherOrder> implements IVoucherOrderService {
-    
-
     public static final ThreadPoolExecutor SECKILL_ORDER_EXECUTOR =
             new ThreadPoolExecutor(
                     1,
@@ -53,27 +51,27 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             return t;
         }
     }
-    
+
     @Override
     public Result<Long> seckillVoucher(Long voucherId) {
         return null;
     }
-    
+
     @Override
     public Long getSeckillVoucherOrder(GetVoucherOrderDto getVoucherOrderDto) {
         return null;
     }
-    
+
     @Override
     public Long getSeckillVoucherOrderIdByVoucherId(GetVoucherOrderByVoucherIdDto getVoucherOrderByVoucherIdDto) {
         return null;
     }
-    
+
     @Override
     public Boolean cancel(CancelVoucherOrderDto cancelVoucherOrderDto) {
         return false;
     }
-    
+
     @Override
     public boolean autoIssueVoucherToEarliestSubscriber(final Long voucherId, final Long excludeUserId) {
         return false;
