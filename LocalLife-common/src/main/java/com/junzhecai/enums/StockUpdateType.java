@@ -2,44 +2,39 @@ package com.junzhecai.enums;
 
 import lombok.Getter;
 
+import java.util.HashMap;
+import java.util.Map;
+
+@Getter
 public enum StockUpdateType {
-    /**
-     * 库存操作类型
-     * */
     DECREASE(-1, "扣减"),
-    
-    INCREASE(1, "增加"),
-    ;
-    
-    @Getter
+    INCREASE(1, "增加");
+
     private final Integer code;
-    
-    private String msg = "";
-    
+    private final String msg;
+
+    private static final Map<Integer, StockUpdateType> CODE_MAP = new HashMap<>();
+
+    static {
+        for (StockUpdateType type : values()) {
+            CODE_MAP.put(type.code, type);
+        }
+    }
+
     StockUpdateType(Integer code, String msg) {
         this.code = code;
         this.msg = msg;
     }
-    
-    public String getMsg() {
-        return this.msg == null ? "" : this.msg;
-    }
-    
+
+    // O(1) 查找 + null 安全
     public static String getMsg(Integer code) {
-        for (StockUpdateType re : StockUpdateType.values()) {
-            if (re.code.intValue() == code.intValue()) {
-                return re.msg;
-            }
-        }
-        return "";
+        if (code == null) return "";
+        StockUpdateType type = CODE_MAP.get(code);
+        return type == null ? "" : type.msg;
     }
-    
-    public static StockUpdateType getRc(Integer code) {
-        for (StockUpdateType re : StockUpdateType.values()) {
-            if (re.code.intValue() == code.intValue()) {
-                return re;
-            }
-        }
-        return null;
+
+    public static StockUpdateType fromCode(Integer code) {
+        if (code == null) return null;
+        return CODE_MAP.get(code);
     }
 }

@@ -3,6 +3,7 @@ package com.junzhecai.controller;
 import com.junzhecai.dto.GetSeckillVoucherDto;
 import com.junzhecai.dto.Result;
 import com.junzhecai.dto.UpdateSeckillVoucherDto;
+import com.junzhecai.dto.UpdateSeckillVoucherStockDto;
 import com.junzhecai.model.SeckillVoucherFullModel;
 import com.junzhecai.service.ISeckillVoucherService;
 import com.junzhecai.service.IVoucherService;
@@ -26,6 +27,12 @@ public class VoucherController {
     @PostMapping("/update/seckill")
     public Result<Void> updateSeckillVoucher(@Valid @RequestBody UpdateSeckillVoucherDto updateSeckillVoucherDto) {
         voucherService.updateSeckillVoucher(updateSeckillVoucherDto);
+        return Result.ok();
+    }
+
+    @PostMapping("/update/seckill/stock")
+    public Result<Void> updateSeckillVoucherStock(@Valid @RequestBody UpdateSeckillVoucherStockDto updateSeckillVoucherStockDto) {
+        voucherService.updateSeckillVoucherStock(updateSeckillVoucherStockDto);
         return Result.ok();
     }
 }

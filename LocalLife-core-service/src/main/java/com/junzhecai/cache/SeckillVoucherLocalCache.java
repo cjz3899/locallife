@@ -17,35 +17,35 @@ public class SeckillVoucherLocalCache {
      *
      */
     private final Cache<String, SeckillVoucherFullModel> cache = Caffeine.newBuilder()
-            // 限制缓存最大容量，防止数据无限增长导致内存溢出
+            //限制缓存最大容量，防止数据无限增长导致内存溢出
             .maximumSize(10000)
-            // 设置自定义过期策略，实现按券结束时间自动失效
+            //设置自定义过期策略，实现按券结束时间自动失效
             .expireAfter(new Expiry<String, SeckillVoucherFullModel>() {
-                // 定义缓存项创建时的过期时间计算逻辑
+                //定义缓存项创建时的过期时间计算逻辑
                 @Override
                 public long expireAfterCreate(@NonNull String key, @NonNull SeckillVoucherFullModel value, long currentTime) {
-                    // 默认设置缓存有效期为60秒，作为兜底策略
+                    //默认设置缓存有效期为60秒，作为兜底策略
                     long ttlSeconds = 60L;
-                    // 如果缓存对象存在并包含结束时间，则按结束时间计算剩余秒数
+                    //如果缓存对象存在并包含结束时间，则按结束时间计算剩余秒数
                     if (value.getEndTime() != null) {
-                        // 计算当前时间与结束时间之间的秒数，并保证至少保留1秒
+                        //计算当前时间与结束时间之间的秒数，并保证至少保留1秒
                         ttlSeconds = Math.max(
                                 LocalDateTimeUtil.between(LocalDateTimeUtil.now(), value.getEndTime()).getSeconds(),
                                 1L
                         );
                     }
-                    // 将秒转换为纳秒，符合Caffeine过期接口的返回值要求
+                    //将秒转换为纳秒，符合Caffeine过期接口的返回值要求
                     return TimeUnit.NANOSECONDS.convert(ttlSeconds, TimeUnit.SECONDS);
                 }
 
-                // 定义缓存项更新后的过期策略
+                //定义缓存项更新后的过期策略
                 @Override
                 public long expireAfterUpdate(String key, SeckillVoucherFullModel value, long currentTime, long currentDuration) {
                     // 更新时保持原有剩余时间，避免频繁刷新导致长期驻留
                     return currentDuration;
                 }
 
-                // 定义缓存项被读取后的过期策略
+                //定义缓存项被读取后的过期策略
                 @Override
                 public long expireAfterRead(String key, SeckillVoucherFullModel value, long currentTime, long currentDuration) {
                     // 读取不改变剩余时间，防止热点数据一直存活

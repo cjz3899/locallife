@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-//Kafka 生产者：广播“秒杀券缓存失效”消息
+//Kafka生产者：广播秒杀券缓存失效消息
 @Slf4j
 @Component
 public class SeckillVoucherInvalidationProducer extends AbstractProducerHandler<MessageExtend<SeckillVoucherInvalidationMessage>> {

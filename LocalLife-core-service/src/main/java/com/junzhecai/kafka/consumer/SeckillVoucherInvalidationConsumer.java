@@ -48,9 +48,10 @@ public class SeckillVoucherInvalidationConsumer extends AbstractConsumerHandler<
         super(SeckillVoucherInvalidationMessage.class);
     }
 
+    //消息监听器
     @KafkaListener(
             topics = {SPRING_INJECT_PREFIX_DISTINCTION_NAME + "-" + SECKILL_VOUCHER_CACHE_INVALIDATION_TOPIC},
-            groupId = "${prefix.distinction.name:hmdp}-seckill_voucher_cache_invalidation-${random.uuid}"
+            groupId = "${prefix.distinction.name:local-life}-seckill_voucher_cache_invalidation-${random.uuid}"
     )
     public void onMessage(String value,
                           @Headers Map<String, Object> headers,

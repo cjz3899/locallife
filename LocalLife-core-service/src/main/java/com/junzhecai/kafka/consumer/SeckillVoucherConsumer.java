@@ -41,7 +41,7 @@ import static com.junzhecai.constant.Constant.SECKILL_VOUCHER_TOPIC;
 import static com.junzhecai.constant.Constant.SPRING_INJECT_PREFIX_DISTINCTION_NAME;
 
 
-//Kafka 消费者：处理秒杀券下单消息
+//Kafka消费者：处理秒杀券下单消息
 @Slf4j
 @Component
 public class SeckillVoucherConsumer extends AbstractConsumerHandler<SeckillVoucherMessage> {

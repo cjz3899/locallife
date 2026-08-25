@@ -25,6 +25,7 @@ public class SeckillVoucherCacheInvalidationPublisher {
     private SeckillVoucherLocalCache seckillVoucherLocalCache;
 
     public void publishInvalidate(Long voucherId, String reason) {
+        //清理redis缓存
         RedisKeyBuild seckillVoucherRedisKey =
                 RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_VOUCHER_TAG_KEY, voucherId);
         seckillVoucherLocalCache.invalidate(seckillVoucherRedisKey.getRelKey());
@@ -32,6 +33,7 @@ public class SeckillVoucherCacheInvalidationPublisher {
         redisCache.del(RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_STOCK_TAG_KEY, voucherId));
         redisCache.del(RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_VOUCHER_NULL_TAG_KEY, voucherId));
 
+        //广播消息到所有实例
         SeckillVoucherInvalidationMessage payload = new SeckillVoucherInvalidationMessage(voucherId, reason);
         invalidationProducer.sendPayload(
                 SpringUtil.getPrefixDistinctionName() + "-" + SECKILL_VOUCHER_CACHE_INVALIDATION_TOPIC,
