@@ -24,11 +24,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 @EnableConfigurationProperties(RedissonBaseProperties.class)
 //redisson通用配置
 public class RedissonCommonAutoConfiguration {
-
+    //计数器，用于线程自增命名
     private final AtomicInteger executeTaskThreadCount = new AtomicInteger(1);
 
     @Bean
     public RedissonClient redissonClient(RedisProperties redisProperties, RedissonBaseProperties redissonBaseProperties) {
+        /*redis的两种连接方式
+         * 1. redis://  表示明文连接，不加密适合内网环境开发，性能较好
+         * 2. rediss:// 表示ssl连接，加密适合公网环境，但性能开销较大
+         * */
         Config config = new Config();
         String prefix = "redis://";
         Method method = ReflectionUtils.findMethod(RedisProperties.class, "isSsl");
@@ -42,6 +46,7 @@ public class RedissonCommonAutoConfiguration {
                 .setPassword(redisProperties.getPassword());
         config.setThreads(redissonBaseProperties.getThreads());
         config.setNettyThreads(redissonBaseProperties.getNettyThreads());
+        //若为空，使用RedissonBaseProperties中的配置
         if (Objects.nonNull(redissonBaseProperties.getCorePoolSize()) &&
                 Objects.nonNull(redissonBaseProperties.getMaximumPoolSize())) {
             ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(

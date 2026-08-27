@@ -85,6 +85,7 @@
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
+                    <parameters>true</parameters>
                     <encoding>${project.sourceEncoding}</encoding>
                 </configuration>
             </plugin>
@@ -102,7 +103,7 @@
                 <version>${maven-source.version}</version>
                 <configuration>
                     <!--install、deploy时会上传源码jar包到仓库，默认是true-->
-                    <attach>true</attach>
+                    <attach>false</attach>
                 </configuration>
                 <executions>
                     <execution>

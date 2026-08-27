@@ -13,21 +13,12 @@ public class ServiceLockFactory {
 
 
     public ServiceLocker getLock(LockType lockType) {
-        ServiceLocker lock;
-        switch (lockType) {
-            case Fair:
-                lock = manageLocker.getFairLocker();
-                break;
-            case Write:
-                lock = manageLocker.getWriteLocker();
-                break;
-            case Read:
-                lock = manageLocker.getReadLocker();
-                break;
-            default:
-                lock = manageLocker.getReentrantLocker();
-                break;
-        }
+        ServiceLocker lock = switch (lockType) {
+            case Fair -> manageLocker.getFairLocker();
+            case Write -> manageLocker.getWriteLocker();
+            case Read -> manageLocker.getReadLocker();
+            default -> manageLocker.getReentrantLocker();
+        };
         return lock;
     }
 }

@@ -1,5 +1,6 @@
 package com.junzhecai.utils;
 
+import jakarta.annotation.Resource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +19,7 @@ public class RedisIdWorker {
      */
     private static final int COUNT_BITS = 32;
 
+    @Resource
     private StringRedisTemplate stringRedisTemplate;
 
     public RedisIdWorker(StringRedisTemplate stringRedisTemplate) {

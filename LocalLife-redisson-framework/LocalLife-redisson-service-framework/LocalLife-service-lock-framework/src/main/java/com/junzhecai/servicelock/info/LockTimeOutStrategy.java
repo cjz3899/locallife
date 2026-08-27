@@ -1,6 +1,8 @@
 package com.junzhecai.servicelock.info;
 
 
+import com.junzhecai.exception.LocalLifeFrameException;
+
 //锁超时策略
 public enum LockTimeOutStrategy implements LockTimeOutHandler {
     /**
@@ -11,7 +13,7 @@ public enum LockTimeOutStrategy implements LockTimeOutHandler {
         @Override
         public void handler(String lockName) {
             String msg = String.format("%s请求频繁", lockName);
-            throw new RuntimeException(msg);
+            throw new LocalLifeFrameException(msg);
         }
     }
 }
