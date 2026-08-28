@@ -9,7 +9,7 @@
 
     <Properties>
         <!-- 配置日志文件输出目录 -->
-        <Property name="LOG_HOME">.</Property>
+        <Property name="LOG_HOME">/Users/caijunzhe/Desktop/LocalLife</Property>
         <Property name="PROJECT_NAME">core-service</Property>
         <Property name="ENV">local</Property>
         <Property name="FILE_NAME">log</Property>

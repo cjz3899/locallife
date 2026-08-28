@@ -18,6 +18,8 @@ import com.junzhecai.redis.RedisKeyBuild;
 import com.junzhecai.service.ISeckillVoucherService;
 import com.junzhecai.service.IVoucherOrderService;
 import com.junzhecai.service.IVoucherService;
+import com.junzhecai.servicelock.LockType;
+import com.junzhecai.servicelock.annotion.ServiceLock;
 import com.junzhecai.vo.GetSubscribeStatusVo;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +32,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 
+import static com.junzhecai.constant.DistributedLockConstants.UPDATE_SECKILL_VOUCHER_STOCK_LOCK;
 import static com.junzhecai.service.impl.VoucherOrderServiceImpl.SECKILL_ORDER_EXECUTOR;
 
 @Slf4j
@@ -121,6 +124,7 @@ public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> impl
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @ServiceLock(lockType = LockType.Write, name = UPDATE_SECKILL_VOUCHER_STOCK_LOCK, keys = {"#updateSeckillVoucherStockDto.voucherId"})
     public void updateSeckillVoucherStock(UpdateSeckillVoucherStockDto updateSeckillVoucherStockDto) {
         SeckillVoucher seckillVoucher = seckillVoucherService.query().eq("voucher_id", updateSeckillVoucherStockDto.getVoucherId()).one();
         if (Objects.isNull(seckillVoucher)) {

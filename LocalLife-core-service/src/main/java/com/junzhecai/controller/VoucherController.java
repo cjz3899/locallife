@@ -35,4 +35,6 @@ public class VoucherController {
         voucherService.updateSeckillVoucherStock(updateSeckillVoucherStockDto);
         return Result.ok();
     }
+
+
 }

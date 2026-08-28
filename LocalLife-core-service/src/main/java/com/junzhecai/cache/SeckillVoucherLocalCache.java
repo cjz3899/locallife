@@ -40,14 +40,14 @@ public class SeckillVoucherLocalCache {
 
                 //定义缓存项更新后的过期策略
                 @Override
-                public long expireAfterUpdate(String key, SeckillVoucherFullModel value, long currentTime, long currentDuration) {
+                public long expireAfterUpdate(@NonNull String key, @NonNull SeckillVoucherFullModel value, long currentTime, long currentDuration) {
                     // 更新时保持原有剩余时间，避免频繁刷新导致长期驻留
                     return currentDuration;
                 }
 
                 //定义缓存项被读取后的过期策略
                 @Override
-                public long expireAfterRead(String key, SeckillVoucherFullModel value, long currentTime, long currentDuration) {
+                public long expireAfterRead(@NonNull String key, @NonNull SeckillVoucherFullModel value, long currentTime, long currentDuration) {
                     // 读取不改变剩余时间，防止热点数据一直存活
                     return currentDuration;
                 }

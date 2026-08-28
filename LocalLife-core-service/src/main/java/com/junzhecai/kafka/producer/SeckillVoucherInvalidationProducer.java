@@ -8,7 +8,6 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.support.PropertiesLoaderSupport;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -24,14 +23,14 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class SeckillVoucherInvalidationProducer extends AbstractProducerHandler<MessageExtend<SeckillVoucherInvalidationMessage>> {
 
-    private final static String RETRY_COUNT = "retryCount";
+    private static final String RETRY_COUNT = "retryCount";
 
-    private final static String DLQ = ".DLQ";
+    private static final String DLQ = ".DLQ";
 
-    @Autowired
+    @Resource
     private PropertiesLoaderSupport propertiesLoaderSupport;
 
-    public SeckillVoucherInvalidationProducer(final KafkaTemplate<String, MessageExtend<SeckillVoucherInvalidationMessage>> kafkaTemplate) {
+    public SeckillVoucherInvalidationProducer(KafkaTemplate<String, MessageExtend<SeckillVoucherInvalidationMessage>> kafkaTemplate) {
         super(kafkaTemplate);
     }
 
@@ -51,11 +50,11 @@ public class SeckillVoucherInvalidationProducer extends AbstractProducerHandler<
 
 
     @Override
-    protected void afterSendFailure(final String topic, final MessageExtend<SeckillVoucherInvalidationMessage> message, final Throwable throwable) {
-        final SeckillVoucherInvalidationMessage body = message.getMessageBody();
-        final Long voucherId = body.getVoucherId();
-        final String reason = body.getReason();
-        final String errMsg = throwable == null ? "unknown" : throwable.getMessage();
+    protected void afterSendFailure(String topic, MessageExtend<SeckillVoucherInvalidationMessage> message, Throwable throwable) {
+        SeckillVoucherInvalidationMessage body = message.getMessageBody();
+        Long voucherId = body.getVoucherId();
+        String reason = body.getReason();
+        String errMsg = throwable == null ? "unknown" : throwable.getMessage();
         log.error("SeckillVoucherInvalidation send failed, topic={}, uuid={}, key={}, voucherId={}, reason={}, error= {}",
                 topic, message.getUuid(), message.getKey(), voucherId, reason, errMsg, throwable);
         if (topic.contains(DLQ)) {
@@ -89,7 +88,7 @@ public class SeckillVoucherInvalidationProducer extends AbstractProducerHandler<
             return;
         }
 
-        final String dlqReason = "send_invalid_cache_broadcast_failed: " + truncate(errMsg);
+        String dlqReason = "send_invalid_cache_broadcast_failed: " + truncate(errMsg);
         try {
             sendToDlq(topic, body, dlqReason);
             log.warn("Send cache invalidation to DLQ, originalTopic={}, uuid={}, voucherId={}, dlqReason={}",

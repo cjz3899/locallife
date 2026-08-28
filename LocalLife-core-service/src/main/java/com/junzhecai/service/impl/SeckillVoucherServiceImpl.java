@@ -31,8 +31,8 @@ import java.util.concurrent.TimeUnit;
 
 import static com.junzhecai.constant.Constant.BLOOM_FILTER_HANDLER_VOUCHER;
 import static com.junzhecai.constant.DistributedLockConstants.UPDATE_SECKILL_VOUCHER_LOCK;
-import static com.junzhecai.utils.RedisConstants.CACHE_NULL_TTL;
-import static com.junzhecai.utils.RedisConstants.LOCK_SECKILL_VOUCHER_KEY;
+import static com.junzhecai.constant.DistributedLockConstants.UPDATE_SECKILL_VOUCHER_STOCK_LOCK;
+import static com.junzhecai.utils.RedisConstants.*;
 
 @Slf4j
 @Service
@@ -147,7 +147,39 @@ public class SeckillVoucherServiceImpl extends ServiceImpl<SeckillVoucherMapper,
     }
 
     @Override
+    @ServiceLock(lockType = LockType.Read, name = UPDATE_SECKILL_VOUCHER_STOCK_LOCK, keys = {"#voucherId"})
     public void loadVoucherStock(Long voucherId) {
+        if (!bloomFilterHandlerFactory.get(BLOOM_FILTER_HANDLER_VOUCHER).contains(String.valueOf(voucherId))) {
+            log.info("加载库存 布隆过滤器判断不存在 秒杀优惠券id : {}", voucherId);
+            throw new LocalLifeFrameException("秒杀优惠券不存在");
+        }
+        String stock = redisCache.get(RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_STOCK_TAG_KEY, voucherId), String.class);
+        if (Objects.isNull(stock)) {
+            return;
+        }
+        RLock lock = serviceLockTool.getLock(LockType.Reentrant, LOCK_SECKILL_VOUCHER_STOCK_KEY, new String[]{String.valueOf(voucherId)});
+        lock.lock();
+        try {
+            stock = redisCache.get(RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_STOCK_TAG_KEY, voucherId), String.class);
+            if (Objects.isNull(stock)) {
+                return;
+            }
+            SeckillVoucher seckillVoucher = query().eq("voucher_id", voucherId).one();
+            if (Objects.nonNull(seckillVoucher)) {
+                long ttlSeconds = Math.max(
+                        LocalDateTimeUtil.between(LocalDateTimeUtil.now(), seckillVoucher.getEndTime()).getSeconds(),
+                        1L
+                );
+                redisCache.set(
+                        RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_STOCK_TAG_KEY, voucherId),
+                        String.valueOf(seckillVoucher.getStock()),
+                        ttlSeconds,
+                        TimeUnit.SECONDS
+                );
+            }
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override

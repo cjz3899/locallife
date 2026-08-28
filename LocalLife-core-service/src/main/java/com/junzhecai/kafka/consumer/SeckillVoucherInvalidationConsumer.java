@@ -71,7 +71,7 @@ public class SeckillVoucherInvalidationConsumer extends AbstractConsumerHandler<
             return;
         }
         Long voucherId = body.getVoucherId();
-
+        //锁的注解是基于aop切面实现的，需要通过AopContext获取当前代理对象，才能让spring管理的aop切面生效
         ((SeckillVoucherInvalidationConsumer) AopContext.currentProxy()).delCache(voucherId);
     }
 
@@ -88,7 +88,7 @@ public class SeckillVoucherInvalidationConsumer extends AbstractConsumerHandler<
     }
 
     @Override
-    protected void afterConsumeFailure(final MessageExtend<SeckillVoucherInvalidationMessage> message, final Throwable throwable) {
+    protected void afterConsumeFailure(MessageExtend<SeckillVoucherInvalidationMessage> message, Throwable throwable) {
         super.afterConsumeFailure(message, throwable);
         log.warn("删除Redis缓存失败 voucherId={}", message.getMessageBody().getVoucherId(), throwable);
         safeInc(errorTag(throwable));
