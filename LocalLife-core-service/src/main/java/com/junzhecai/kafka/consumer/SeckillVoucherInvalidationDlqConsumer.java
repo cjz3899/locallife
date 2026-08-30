@@ -57,19 +57,17 @@ public class SeckillVoucherInvalidationDlqConsumer extends AbstractConsumerHandl
         SeckillVoucherInvalidationMessage body = message.getMessageBody();
         if (Objects.isNull(body.getVoucherId())) {
             log.warn("DLQ消息载荷为空或voucherId缺失, uuid={}", message.getUuid());
-            safeInc("seckill_invalidation_dlq_replay_skipped", "reason", "invalid_payload");
+            safeInc("seckill_invalidation_dlq_replay_skipped");
             return;
         }
-
-        safeInc("seckill_invalidation_dlq", "reason", "invalid_payload");
-
+        safeInc("seckill_invalidation_dlq");
         auditLog.error("SECKILL_INVALIDATION_DLQ | message={}", JSON.toJSONString(message));
     }
 
-    private void safeInc(String name, String tagKey, String tagValue) {
+    private void safeInc(String name) {
         try {
             if (meterRegistry != null) {
-                meterRegistry.counter(name, tagKey, tagValue).increment();
+                meterRegistry.counter(name, "reason", "invalid_payload").increment();
             }
         } catch (Exception ignore) {
         }
