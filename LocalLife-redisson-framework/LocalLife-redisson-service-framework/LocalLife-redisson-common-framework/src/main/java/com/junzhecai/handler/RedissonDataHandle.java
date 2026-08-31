@@ -25,7 +25,6 @@ public class RedissonDataHandle {
 
     public Duration getDuration(long timeToLive, TimeUnit timeUnit) {
         switch (timeUnit) {
-
             case MINUTES -> {
                 return Duration.ofMinutes(timeToLive);
             }
