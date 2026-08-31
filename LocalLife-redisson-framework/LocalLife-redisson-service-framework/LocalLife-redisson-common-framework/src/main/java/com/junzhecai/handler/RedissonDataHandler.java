@@ -7,7 +7,7 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 @AllArgsConstructor
-public class RedissonDataHandle {
+public class RedissonDataHandler {
 
     private final RedissonClient redissonClient;
 

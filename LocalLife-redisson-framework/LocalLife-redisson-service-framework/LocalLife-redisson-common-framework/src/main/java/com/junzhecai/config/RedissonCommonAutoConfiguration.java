@@ -1,6 +1,6 @@
 package com.junzhecai.config;
 
-import com.junzhecai.handler.RedissonDataHandle;
+import com.junzhecai.handler.RedissonDataHandler;
 import com.junzhecai.locallock.LocalLockCache;
 import com.junzhecai.lockinfo.factory.LockInfoHandleFactory;
 import org.redisson.Redisson;
@@ -63,8 +63,8 @@ public class RedissonCommonAutoConfiguration {
     }
 
     @Bean
-    public RedissonDataHandle redissonDataHandle(RedissonClient redissonClient) {
-        return new RedissonDataHandle(redissonClient);
+    public RedissonDataHandler redissonDataHandle(RedissonClient redissonClient) {
+        return new RedissonDataHandler(redissonClient);
     }
 
     @Bean

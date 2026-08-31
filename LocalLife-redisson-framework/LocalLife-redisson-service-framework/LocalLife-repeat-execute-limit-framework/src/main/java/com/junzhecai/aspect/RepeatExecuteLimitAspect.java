@@ -3,7 +3,7 @@ package com.junzhecai.aspect;
 import com.junzhecai.annotion.RepeatExecuteLimit;
 import com.junzhecai.constant.LockInfoType;
 import com.junzhecai.exception.LocalLifeFrameException;
-import com.junzhecai.handler.RedissonDataHandle;
+import com.junzhecai.handler.RedissonDataHandler;
 import com.junzhecai.locallock.LocalLockCache;
 import com.junzhecai.lockinfo.LockInfoHandle;
 import com.junzhecai.lockinfo.factory.LockInfoHandleFactory;
@@ -29,7 +29,7 @@ import static com.junzhecai.constant.RepeatExecuteLimitConstant.SUCCESS_FLAG;
 @AllArgsConstructor
 public class RepeatExecuteLimitAspect {
     private LockInfoHandleFactory lockInfoHandleFactory;
-    private RedissonDataHandle redissonDataHandle;
+    private RedissonDataHandler redissonDataHandle;
     private LocalLockCache localLockCache;
     private ServiceLockFactory serviceLockFactory;
 

@@ -2,7 +2,7 @@ package com.junzhecai.config;
 
 import com.junzhecai.aspect.RepeatExecuteLimitAspect;
 import com.junzhecai.constant.LockInfoType;
-import com.junzhecai.handler.RedissonDataHandle;
+import com.junzhecai.handler.RedissonDataHandler;
 import com.junzhecai.locallock.LocalLockCache;
 import com.junzhecai.lockinfo.LockInfoHandle;
 import com.junzhecai.lockinfo.factory.LockInfoHandleFactory;
@@ -18,7 +18,7 @@ public class RepeatExecuteLimitAutoConfiguration {
 
     @Bean
     public RepeatExecuteLimitAspect repeatExecuteLimitAspect(LockInfoHandleFactory lockInfoHandleFactory,
-                                                             RedissonDataHandle redissonDataHandle,
+                                                             RedissonDataHandler redissonDataHandle,
                                                              LocalLockCache localLockCache,
                                                              ServiceLockFactory serviceLockFactory) {
         return new RepeatExecuteLimitAspect(lockInfoHandleFactory, redissonDataHandle, localLockCache, serviceLockFactory);
