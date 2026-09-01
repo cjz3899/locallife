@@ -1,16 +1,28 @@
 package com.junzhecai.service.impl;
 
+import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.date.LocalDateTimeUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.junzhecai.core.RedisKeyManage;
 import com.junzhecai.dto.CancelVoucherOrderDto;
 import com.junzhecai.dto.GetVoucherOrderByVoucherIdDto;
 import com.junzhecai.dto.GetVoucherOrderDto;
 import com.junzhecai.dto.Result;
-import com.junzhecai.entity.SeckillVoucher;
+import com.junzhecai.entity.UserInfo;
 import com.junzhecai.entity.VoucherOrder;
+import com.junzhecai.enums.BaseCode;
+import com.junzhecai.enums.LogType;
 import com.junzhecai.exception.LocalLifeFrameException;
+import com.junzhecai.kafka.message.SeckillVoucherMessage;
+import com.junzhecai.lua.SeckillVoucherDomain;
+import com.junzhecai.lua.SeckillVoucherOperate;
 import com.junzhecai.mapper.VoucherOrderMapper;
+import com.junzhecai.model.SeckillVoucherFullModel;
+import com.junzhecai.redis.RedisKeyBuild;
 import com.junzhecai.service.ISeckillVoucherService;
+import com.junzhecai.service.IUserInfoService;
 import com.junzhecai.service.IVoucherOrderService;
 import com.junzhecai.toolkit.SnowflakeIdGenerator;
 import com.junzhecai.utils.UserHolder;
@@ -19,17 +31,27 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, VoucherOrder> implements IVoucherOrderService {
     @Resource
     private ISeckillVoucherService seckillVoucherService;
+    @Resource
+    private IUserInfoService userInfoService;
+    @Resource
+    private SeckillVoucherOperate seckillVoucherOperate;
 
     public static final ThreadPoolExecutor SECKILL_ORDER_EXECUTOR =
             new ThreadPoolExecutor(
@@ -67,36 +89,81 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 
     @Override
     public Result<Long> seckillVoucher(Long voucherId) {
-        SeckillVoucher seckillVoucher = seckillVoucherService.query().eq("voucher_id", voucherId).one();
-        if (seckillVoucher == null) {
-            throw new LocalLifeFrameException("优惠券不存在");
-        }
-        if (seckillVoucher.getBeginTime().isAfter(LocalDateTimeUtil.now())) {
-            return Result.fail("秒杀尚未开始");
-        }
-        if (seckillVoucher.getEndTime().isBefore(LocalDateTimeUtil.now())) {
-            return Result.fail("秒杀已结束");
-        }
+        //查询秒杀优惠券
+        SeckillVoucherFullModel seckillVoucherFullModel = seckillVoucherService.queryByVoucherId(voucherId);
+        //加载优惠券库存
+        seckillVoucherService.loadVoucherStock(voucherId);
         Long userId = UserHolder.getUser().getId();
-        if (seckillVoucher.getStock() < 1) {
-            return Result.fail("库存不足");
+        //验证会员等级
+        verifyUserLevel(seckillVoucherFullModel, userId);
+        long orderId = snowflakeIdGenerator.nextId();
+        long traceId = snowflakeIdGenerator.nextId();
+        //执行lua脚本需要的key
+        List<String> keys = ListUtil.of(
+                RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_STOCK_TAG_KEY, voucherId).getRelKey(),
+                RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_USER_TAG_KEY, voucherId).getRelKey(),
+                RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_TRACE_LOG_TAG_KEY, voucherId).getRelKey()
+        );
+        //执行lua脚本需要的参数
+        String[] args = new String[9];
+        args[0] = voucherId.toString();
+        args[1] = userId.toString();
+        args[2] = String.valueOf(LocalDateTimeUtil.toEpochMilli(seckillVoucherFullModel.getBeginTime()));
+        args[3] = String.valueOf(LocalDateTimeUtil.toEpochMilli(seckillVoucherFullModel.getEndTime()));
+        args[4] = String.valueOf(seckillVoucherFullModel.getStatus());
+        args[5] = String.valueOf(orderId);
+        args[6] = String.valueOf(traceId);
+        args[7] = String.valueOf(LogType.DEDUCT.getCode());
+        long seconds = Duration.between(LocalDateTimeUtil.now(), seckillVoucherFullModel.getEndTime()).getSeconds();
+        long ttlSeconds = Math.max(1L, seconds + Duration.ofDays(1).getSeconds());
+        args[8] = String.valueOf(ttlSeconds);
+        SeckillVoucherDomain seckillVoucherDomain = seckillVoucherOperate.execute(keys, args);
+        if (!seckillVoucherDomain.getCode().equals(BaseCode.SUCCESS.getCode())) {
+            throw new LocalLifeFrameException(Objects.requireNonNull(BaseCode.getRc(seckillVoucherDomain.getCode())));
         }
-        //扣减库存
-        boolean success = seckillVoucherService.update()
-                .setSql("stock = stock - 1")
-                .eq("voucher_id", voucherId)
-                .gt("stock", 0)
-                .update();
-        if (!success) {
-            return Result.fail("库存不足");
+        SeckillVoucherMessage seckillVoucherMessage = new SeckillVoucherMessage(
+                userId,
+                voucherId,
+                orderId,
+                traceId,
+                seckillVoucherDomain.getBeforeQty(),
+                seckillVoucherDomain.getDeductQty(),
+                seckillVoucherDomain.getAfterQty(),
+                Boolean.FALSE
+        );
+    }
+
+    private void verifyUserLevel(SeckillVoucherFullModel seckillVoucherFullModel, Long userId) {
+        String allowedLevelsStr = seckillVoucherFullModel.getAllowedLevels();
+        Integer minLevel = seckillVoucherFullModel.getMinLevel();
+        boolean hasLevelRule = (StrUtil.isNotBlank(allowedLevelsStr)) || Objects.nonNull(minLevel);
+        //如果没有设置用户等级规则，则直接返回
+        if (!hasLevelRule) {
+            return;
         }
-        VoucherOrder voucherOrder = new VoucherOrder();
-        voucherOrder.setId(snowflakeIdGenerator.nextId());
-        voucherOrder.setUserId(userId);
-        voucherOrder.setVoucherId(voucherId);
-        voucherOrder.setCreateTime(LocalDateTimeUtil.now());
-        save(voucherOrder);
-        return Result.ok(voucherOrder.getId());
+        UserInfo userInfo = userInfoService.getByUserId(userId);
+        boolean allowed = true;
+        Integer level = userInfo.getLevel();
+        if (StrUtil.isNotBlank(allowedLevelsStr)) {
+            try {
+                Set<Integer> allowedLevels = Arrays.stream(allowedLevelsStr.split(","))
+                        .map(String::trim)
+                        .filter(StrUtil::isNotBlank)
+                        .map(Integer::valueOf)
+                        .collect(Collectors.toSet());
+                if (CollectionUtil.isNotEmpty(allowedLevels)) {
+                    allowed = allowedLevels.contains(level);
+                }
+            } catch (Exception e) {
+                log.warn("allowedLevels 解析失败", e);
+            }
+        }
+        if (allowed && Objects.nonNull(minLevel)) {
+            allowed = Objects.nonNull(level) && level >= minLevel;
+        }
+        if (!allowed) {
+            throw new LocalLifeFrameException("当前会员级别不满足条件");
+        }
     }
 
     @Override
