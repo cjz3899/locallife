@@ -66,7 +66,6 @@ public class SeckillVoucherConsumer extends AbstractConsumerHandler<SeckillVouch
     @Resource
     private SnowflakeIdGenerator snowflakeIdGenerator;
 
-
     @Resource
     private IAutoIssueNotifyService autoIssueNotifyService;
 
@@ -162,7 +161,7 @@ public class SeckillVoucherConsumer extends AbstractConsumerHandler<SeckillVouch
 
     @Override
     protected void doConsume(MessageExtend<SeckillVoucherMessage> message) {
-        voucherOrderService.createVoucherOrderV2(message);
+        voucherOrderService.createVoucherOrder(message);
     }
 
     @Override

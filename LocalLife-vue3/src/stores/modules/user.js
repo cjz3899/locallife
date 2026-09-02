@@ -1,9 +1,9 @@
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import {defineStore} from 'pinia'
+import {ref} from 'vue'
 
 // 用户模块
 export const useUserStore = defineStore(
-  'Hmdp-User',
+  'LocalLife-User',
   () => {
     const token = ref('') // 定义 token
     const setToken = (t) => {

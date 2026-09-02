@@ -1,9 +1,6 @@
 import request from '@/utils/request'
 
 // 用户：获取验证码
-// export const userGetCode = (phone) =>
-//   request.post('/user/code', { params: { phone } })
-
 export const userGetCode = (phone) =>
   request.post('/user/code', null, { params: { phone } })
 // 用户：登录

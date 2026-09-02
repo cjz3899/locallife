@@ -15,20 +15,17 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 public class SeckillVoucherProducer extends AbstractProducerHandler<MessageExtend<SeckillVoucherMessage>> {
-
     @Resource
     private SnowflakeIdGenerator snowflakeIdGenerator;
-
-
     @Resource
     private RedisVoucherData redisVoucherData;
 
-    public SeckillVoucherProducer(final KafkaTemplate<String, MessageExtend<SeckillVoucherMessage>> kafkaTemplate) {
+    public SeckillVoucherProducer(KafkaTemplate<String, MessageExtend<SeckillVoucherMessage>> kafkaTemplate) {
         super(kafkaTemplate);
     }
 
     @Override
-    protected void afterSendFailure(final String topic, final MessageExtend<SeckillVoucherMessage> message, final Throwable throwable) {
+    protected void afterSendFailure(String topic, MessageExtend<SeckillVoucherMessage> message, Throwable throwable) {
         super.afterSendFailure(topic, message, throwable);
         long traceId = snowflakeIdGenerator.nextId();
         redisVoucherData.rollbackRedisVoucherData(

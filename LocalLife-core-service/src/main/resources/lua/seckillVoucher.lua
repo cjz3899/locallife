@@ -10,6 +10,7 @@ local orderId = ARGV[6]
 local traceId = ARGV[7]
 local logType = ARGV[8]
 local ttlSeconds = tonumber(ARGV[9])
+-- 获取当前时间
 local timeArr = redis.call('TIME')
 local nowMillis = tonumber(timeArr[1]) * 1000 + math.floor(tonumber(timeArr[2]) / 1000)
 
@@ -43,18 +44,18 @@ redis.call('sadd', seckillUserKey, userId)
 local timeArr2 = redis.call('TIME')
 local logNowMillis = tonumber(timeArr2[1]) * 1000 + math.floor(tonumber(timeArr2[2]) / 1000)
 local logEntry = cjson.encode({
-  logType = logType,
-  ts = logNowMillis,
-  orderId = orderId,
-  traceId = traceId,
-  userId = userId,
-  voucherId = voucherId,
-  beforeQty = beforeQty,
-  changeQty = changeQty,
-  afterQty = afterQty
+    logType = logType,
+    ts = logNowMillis,
+    orderId = orderId,
+    traceId = traceId,
+    userId = userId,
+    voucherId = voucherId,
+    beforeQty = beforeQty,
+    changeQty = changeQty,
+    afterQty = afterQty
 })
 redis.call('hset', traceLogKey, traceId, logEntry)
 if ttlSeconds and ttlSeconds > 0 then
-  redis.call('expire', traceLogKey, ttlSeconds)
+    redis.call('expire', traceLogKey, ttlSeconds)
 end
 return string.format('{"%s": %d, "%s": %s, "%s": %s, "%s": %s}', 'code', 0, 'beforeQty', beforeQty, 'deductQty', changeQty, 'afterQty', afterQty)

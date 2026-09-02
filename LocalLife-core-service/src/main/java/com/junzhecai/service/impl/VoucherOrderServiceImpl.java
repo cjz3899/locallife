@@ -5,31 +5,38 @@ import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.date.LocalDateTimeUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.junzhecai.annotion.RepeatExecuteLimit;
 import com.junzhecai.core.RedisKeyManage;
+import com.junzhecai.core.SpringUtil;
 import com.junzhecai.dto.CancelVoucherOrderDto;
 import com.junzhecai.dto.GetVoucherOrderByVoucherIdDto;
 import com.junzhecai.dto.GetVoucherOrderDto;
 import com.junzhecai.dto.Result;
 import com.junzhecai.entity.UserInfo;
 import com.junzhecai.entity.VoucherOrder;
+import com.junzhecai.entity.VoucherOrderRouter;
 import com.junzhecai.enums.BaseCode;
+import com.junzhecai.enums.BusinessType;
 import com.junzhecai.enums.LogType;
+import com.junzhecai.enums.OrderStatus;
 import com.junzhecai.exception.LocalLifeFrameException;
 import com.junzhecai.kafka.message.SeckillVoucherMessage;
+import com.junzhecai.kafka.producer.SeckillVoucherProducer;
 import com.junzhecai.lua.SeckillVoucherDomain;
 import com.junzhecai.lua.SeckillVoucherOperate;
 import com.junzhecai.mapper.VoucherOrderMapper;
+import com.junzhecai.message.MessageExtend;
 import com.junzhecai.model.SeckillVoucherFullModel;
+import com.junzhecai.redis.RedisCache;
 import com.junzhecai.redis.RedisKeyBuild;
-import com.junzhecai.service.ISeckillVoucherService;
-import com.junzhecai.service.IUserInfoService;
-import com.junzhecai.service.IVoucherOrderService;
+import com.junzhecai.service.*;
 import com.junzhecai.toolkit.SnowflakeIdGenerator;
 import com.junzhecai.utils.UserHolder;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -43,6 +50,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import static com.junzhecai.constant.Constant.SECKILL_VOUCHER_TOPIC;
+import static com.junzhecai.constant.RepeatExecuteLimitConstants.SECKILL_VOUCHER_ORDER;
+
 @Slf4j
 @Service
 public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, VoucherOrder> implements IVoucherOrderService {
@@ -52,6 +62,12 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     private IUserInfoService userInfoService;
     @Resource
     private SeckillVoucherOperate seckillVoucherOperate;
+    @Resource
+    private IVoucherOrderRouterService voucherOrderRouterService;
+    @Resource
+    private RedisCache redisCache;
+    @Resource
+    private IVoucherReconcileLogService voucherReconcileLogService;
 
     public static final ThreadPoolExecutor SECKILL_ORDER_EXECUTOR =
             new ThreadPoolExecutor(
@@ -65,6 +81,8 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             );
     @Resource
     private SnowflakeIdGenerator snowflakeIdGenerator;
+    @Resource
+    private SeckillVoucherProducer seckillVoucherProducer;
 
     private static class NamedThreadFactory implements ThreadFactory {
         private final String namePrefix;
@@ -131,6 +149,8 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
                 seckillVoucherDomain.getAfterQty(),
                 Boolean.FALSE
         );
+        seckillVoucherProducer.sendPayload(SpringUtil.getPrefixDistinctionName() + "-" + SECKILL_VOUCHER_TOPIC, seckillVoucherMessage);
+        return Result.ok(orderId);
     }
 
     private void verifyUserLevel(SeckillVoucherFullModel seckillVoucherFullModel, Long userId) {
@@ -174,6 +194,61 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     @Override
     public Long getSeckillVoucherOrderIdByVoucherId(GetVoucherOrderByVoucherIdDto getVoucherOrderByVoucherIdDto) {
         return null;
+    }
+
+    @Override
+    @RepeatExecuteLimit(name = SECKILL_VOUCHER_ORDER, keys = {"#message.uuid"})
+    @Transactional(rollbackFor = Exception.class)
+    public boolean createVoucherOrder(MessageExtend<SeckillVoucherMessage> message) {
+        //获取消息体
+        SeckillVoucherMessage messageBody = message.getMessageBody();
+        Long userId = messageBody.getUserId();
+        //根据优惠券id和用户id查询是否已经存在正常订单
+        VoucherOrder normalVoucherOrder = query()
+                /*分片键字段：voucher_id user_id
+                 * 查询时要同时作为查询条件，确保分片键的唯一性*/
+                .eq("voucher_id", messageBody.getVoucherId())
+                .eq("user_id", userId)
+                .eq("status", OrderStatus.NORMAL.getCode()).one();
+        if (Objects.nonNull(normalVoucherOrder)) {
+            log.warn("用户{}已经存在正常订单，优惠券{}", userId, messageBody.getVoucherId());
+        }
+        //扣减库存
+        boolean success = seckillVoucherService.update()
+                .setSql("stock = stock - 1")
+                .eq("voucher_id", messageBody.getVoucherId())
+                .gt("stock", 0).update();
+        if (!success) {
+            throw new LocalLifeFrameException("优惠券库存不足，优惠券id:" + messageBody.getVoucherId());
+        }
+        //创建订单
+        VoucherOrder voucherOrder = new VoucherOrder();
+        voucherOrder.setId(messageBody.getOrderId());
+        voucherOrder.setUserId(messageBody.getUserId());
+        voucherOrder.setVoucherId(messageBody.getVoucherId());
+        voucherOrder.setCreateTime(LocalDateTimeUtil.now());
+        save(voucherOrder);
+        //创建订单路由
+        VoucherOrderRouter voucherOrderRouter = new VoucherOrderRouter();
+        voucherOrderRouter.setId(snowflakeIdGenerator.nextId());
+        voucherOrderRouter.setOrderId(voucherOrder.getId());
+        voucherOrderRouter.setUserId(userId);
+        voucherOrderRouter.setVoucherId(voucherOrder.getVoucherId());
+        voucherOrderRouter.setCreateTime(LocalDateTimeUtil.now());
+        voucherOrderRouter.setUpdateTime(LocalDateTimeUtil.now());
+        voucherOrderRouterService.save(voucherOrderRouter);
+        redisCache.set(RedisKeyBuild.createRedisKey(RedisKeyManage.DB_SECKILL_ORDER_KEY,
+                        messageBody.getOrderId()),
+                voucherOrder, 60,
+                TimeUnit.SECONDS);
+        //对账日志
+        voucherReconcileLogService.saveReconcileLog(
+                LogType.DEDUCT.getCode(),
+                BusinessType.SUCCESS.getCode(),
+                "order created",
+                message
+        );
+        return true;
     }
 
     @Override

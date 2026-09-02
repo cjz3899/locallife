@@ -13,6 +13,7 @@ import java.util.List;
 
 @Slf4j
 @Component
+//秒杀回滚组件：通过Lua脚本原子性地回滚Redis中的库存和订单数据，保证秒杀异常时数据一致性
 public class SeckillVoucherRollBackOperate {
 
     @Resource
