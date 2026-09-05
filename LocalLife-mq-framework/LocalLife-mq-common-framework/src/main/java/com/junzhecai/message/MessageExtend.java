@@ -14,7 +14,6 @@ import java.util.UUID;
 @AllArgsConstructor
 @RequiredArgsConstructor//lombok生成一个构造函数，该构造函数包含所有final属性和@NonNull属性
 public final class MessageExtend<T> implements Serializable {
-
     @Serial
     private static final long serialVersionUID = 1L;
 

@@ -222,20 +222,22 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             throw new LocalLifeFrameException("优惠券库存不足，优惠券id:" + messageBody.getVoucherId());
         }
         //创建订单
-        VoucherOrder voucherOrder = new VoucherOrder();
-        voucherOrder.setId(messageBody.getOrderId());
-        voucherOrder.setUserId(messageBody.getUserId());
-        voucherOrder.setVoucherId(messageBody.getVoucherId());
-        voucherOrder.setCreateTime(LocalDateTimeUtil.now());
+        VoucherOrder voucherOrder = VoucherOrder.builder()
+                .id(messageBody.getOrderId())
+                .userId(messageBody.getUserId())
+                .voucherId(messageBody.getVoucherId())
+                .createTime(LocalDateTimeUtil.now())
+                .build();
         save(voucherOrder);
         //创建订单路由
-        VoucherOrderRouter voucherOrderRouter = new VoucherOrderRouter();
-        voucherOrderRouter.setId(snowflakeIdGenerator.nextId());
-        voucherOrderRouter.setOrderId(voucherOrder.getId());
-        voucherOrderRouter.setUserId(userId);
-        voucherOrderRouter.setVoucherId(voucherOrder.getVoucherId());
-        voucherOrderRouter.setCreateTime(LocalDateTimeUtil.now());
-        voucherOrderRouter.setUpdateTime(LocalDateTimeUtil.now());
+        VoucherOrderRouter voucherOrderRouter = VoucherOrderRouter.builder()
+                .id(snowflakeIdGenerator.nextId())
+                .orderId(voucherOrder.getId())
+                .userId(userId)
+                .voucherId(voucherOrder.getVoucherId())
+                .createTime(LocalDateTimeUtil.now())
+                .updateTime(LocalDateTimeUtil.now())
+                .build();
         voucherOrderRouterService.save(voucherOrderRouter);
         redisCache.set(RedisKeyBuild.createRedisKey(RedisKeyManage.DB_SECKILL_ORDER_KEY,
                         messageBody.getOrderId()),

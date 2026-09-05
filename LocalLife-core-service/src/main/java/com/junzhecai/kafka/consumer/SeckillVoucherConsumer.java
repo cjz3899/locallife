@@ -214,8 +214,8 @@ public class SeckillVoucherConsumer extends AbstractConsumerHandler<SeckillVouch
     }
 
     @Override
-    protected void afterConsumeFailure(final MessageExtend<SeckillVoucherMessage> message,
-                                       final Throwable throwable) {
+    protected void afterConsumeFailure(MessageExtend<SeckillVoucherMessage> message,
+                                       Throwable throwable) {
         super.afterConsumeFailure(message, throwable);
         SeckillVoucherOrderOperate seckillVoucherOrderOperate = SeckillVoucherOrderOperate.YES;
         if (throwable instanceof LocalLifeFrameException localLifeFrameException) {
