@@ -29,8 +29,6 @@ public class SeckillVoucherInvalidationDlqConsumer extends AbstractConsumerHandl
 
     @Resource
     private MeterRegistry meterRegistry;
-
-
     private static final Logger auditLog = LoggerFactory.getLogger("AUDIT");
 
 

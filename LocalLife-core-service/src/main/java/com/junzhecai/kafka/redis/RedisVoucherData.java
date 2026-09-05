@@ -41,12 +41,15 @@ public class RedisVoucherData {
     @Resource
     private IRollbackAlertService rollbackAlertService;
 
+    //最大重试次数
     @Value("${seckill.rollback.retry.maxAttempts:3}")
     private int retryMaxAttempts;
 
+    //初始重试间隔时间（毫秒）
     @Value("${seckill.rollback.retry.initialBackoffMillis:200}")
     private long initialBackoffMillis;
 
+    //最大重试间隔时间（毫秒）
     @Value("${seckill.rollback.retry.maxBackoffMillis:1000}")
     private long maxBackoffMillis;
 
@@ -74,8 +77,9 @@ public class RedisVoucherData {
         args[7] = String.valueOf(changeQty);
         args[8] = String.valueOf(afterQty);
 
+        //
         Integer finalCode = luaRollbackWithResultCode(keys, args, retryMaxAttempts, initialBackoffMillis, maxBackoffMillis);
-        boolean ok = finalCode != null && finalCode.equals(BaseCode.SUCCESS.getCode());
+        boolean ok = BaseCode.SUCCESS.getCode().equals(finalCode);
         if (!ok) {
             String reason = BaseCode.getMsg(finalCode == null ? -1 : finalCode);
             log.error("Redis回滚最终失败|voucherId={}|userId={}|orderId={}|traceId={} reason={}", voucherId, userId, orderId, traceId, reason);
@@ -97,7 +101,7 @@ public class RedisVoucherData {
             try {
                 Integer result = seckillVoucherRollBackOperate.execute(keys, args);
                 lastCode = result;
-                if (result != null && result.equals(BaseCode.SUCCESS.getCode())) {
+                if (BaseCode.SUCCESS.getCode().equals(result)) {
                     safeInc("seckill_rollback_retry_success", "component", "redis_voucher_data");
                     return result;
                 }
@@ -132,25 +136,28 @@ public class RedisVoucherData {
 
     private void saveRollbackFailureLog(Long voucherId, Long userId, Long orderId, Long traceId, String detail, Integer resultCode) {
         try {
-            RollbackFailureLog logEntity = new RollbackFailureLog();
-            logEntity.setId(snowflakeIdGenerator.nextId())
-                    .setOrderId(orderId)
-                    .setUserId(userId)
-                    .setVoucherId(voucherId)
-                    .setDetail(detail)
-                    .setResultCode(resultCode)
-                    .setTraceId(traceId)
-                    .setRetryAttempts(retryMaxAttempts)
-                    .setSource("redis_voucher_data")
-                    .setCreateTime(LocalDateTime.now())
-                    .setUpdateTime(LocalDateTime.now());
+            RollbackFailureLog logEntity = RollbackFailureLog.builder()
+                    .id(snowflakeIdGenerator.nextId())
+                    .orderId(orderId)
+                    .userId(userId)
+                    .voucherId(voucherId)
+                    .detail(detail)
+                    .resultCode(resultCode)
+                    .traceId(traceId)
+                    .retryAttempts(retryMaxAttempts)
+                    .source("redis_voucher_data")
+                    .createTime(LocalDateTime.now())
+                    .updateTime(LocalDateTime.now())
+                    .build();
             rollbackFailureLogService.save(logEntity);
             safeInc("seckill_rollback_failure", "component", "redis_voucher_data");
             safeInc("seckill_rollback_failure", "reason", "retry_exhausted");
+            //通知回滚失败
             rollbackAlertService.sendRollbackAlert(logEntity);
         } catch (Exception e) {
             log.warn("保存回滚失败日志异常", e);
         }
+
     }
 
     private void safeInc(String name, String tagKey, String tagValue) {
