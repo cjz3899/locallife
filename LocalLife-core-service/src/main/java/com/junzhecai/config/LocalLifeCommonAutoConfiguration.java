@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerIntercept
 import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 
-public class LocalLifeCommonAutoConfig {
+public class LocalLifeCommonAutoConfiguration {
     
     @Bean
     public Jackson2ObjectMapperBuilderCustomizer jacksonCustom(){
