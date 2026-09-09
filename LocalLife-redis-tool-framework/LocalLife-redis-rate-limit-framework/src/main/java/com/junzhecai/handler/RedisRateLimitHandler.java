@@ -2,9 +2,9 @@ package com.junzhecai.handler;
 
 import cn.hutool.core.util.StrUtil;
 import com.junzhecai.config.SeckillRateLimitConfigProperties;
+import com.junzhecai.context.RateLimitScene;
 import com.junzhecai.core.RedisKeyManage;
 import com.junzhecai.enums.BaseCode;
-import com.junzhecai.enums.RateLimitScene;
 import com.junzhecai.exception.LocalLifeFrameException;
 import com.junzhecai.lua.RateLimitSlidingOperate;
 import com.junzhecai.lua.TokenBucketRateLimitOperate;
@@ -15,6 +15,8 @@ import lombok.AllArgsConstructor;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 @AllArgsConstructor
@@ -33,8 +35,77 @@ public class RedisRateLimitHandler implements RateLimitHandler {
         }
         //验证黑名单
         checkBans(voucherId, userId, clientIp);
+        //IP限流窗口毫秒数
+        int ipLimitWindowMills = resolveIpWindow(rateLimitScene);
+        //IP最大尝试次数
+        int ipLimitMaxAttempts = resolveIpMaxAttempts(rateLimitScene);
+        //用户限流窗口毫秒数
+        int userLimitWindowMills = resolveUserWindow(rateLimitScene);
+        //用户最大尝试次数
+        int userLimitMaxAttempts = resolveUserMaxAttempts(rateLimitScene);
+        //是否启动滑动窗口限流，默认false，采用动态令牌桶
+        Boolean userSliding = seckillRateLimitConfigProperties.getEnableSlidingWindow();
+        //构建lua中的键
+        List<String> keys = buildRateLimitKeys(voucherId, userId, clientIp, userSliding);
+        //构建lua中的数据
+        String[] args = buildArgs(ipLimitWindowMills, ipLimitMaxAttempts, userLimitWindowMills, userLimitMaxAttempts);
+    }
 
-        
+    private String[] buildArgs(int ipLimitWindowMills, int ipLimitMaxAttempts, int userLimitWindowMills, int userLimitMaxAttempts) {
+        String[] args = new String[4];
+        args[0] = String.valueOf(ipLimitWindowMills);
+        args[1] = String.valueOf(ipLimitMaxAttempts);
+        args[2] = String.valueOf(userLimitWindowMills);
+        args[3] = String.valueOf(userLimitMaxAttempts);
+        return args;
+    }
+
+    private List<String> buildRateLimitKeys(Long voucherId, Long userId, String clientIp, boolean userSliding) {
+        List<String> keys = new ArrayList<>(2);
+        if (Objects.nonNull(clientIp)) {
+            String ipKey = userSliding ? RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_LIMIT_IP_SW_TAG_KEY, voucherId, clientIp).getRelKey()
+                    : RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_LIMIT_IP_TB_TAG_KEY, voucherId, clientIp).getRelKey();
+            keys.add(ipKey);
+        }
+        if (Objects.nonNull(userId)) {
+            String userKey = userSliding ? RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_LIMIT_USER_SW_TAG_KEY, voucherId, userId).getRelKey()
+                    : RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_LIMIT_USER_TB_TAG_KEY, voucherId, userId).getRelKey();
+            keys.add(userKey);
+        }
+        return keys;
+    }
+
+
+    private int resolveIpWindow(RateLimitScene scene) {
+        SeckillRateLimitConfigProperties.EndpointLimit ep =
+                scene == RateLimitScene.ISSUE_TOKEN ? seckillRateLimitConfigProperties.getIssue() :
+                        seckillRateLimitConfigProperties.getSeckill();
+        Integer v = ep != null ? ep.getIpWindowMillis() : null;
+        return v != null ? v : seckillRateLimitConfigProperties.getIpWindowMills();
+    }
+
+    private int resolveIpMaxAttempts(RateLimitScene scene) {
+        SeckillRateLimitConfigProperties.EndpointLimit ep =
+                scene == RateLimitScene.ISSUE_TOKEN ? seckillRateLimitConfigProperties.getIssue() :
+                        seckillRateLimitConfigProperties.getSeckill();
+        Integer v = ep != null ? ep.getIpMaxAttempts() : null;
+        return v != null ? v : seckillRateLimitConfigProperties.getIpMaxAttempts();
+    }
+
+    private int resolveUserWindow(RateLimitScene scene) {
+        SeckillRateLimitConfigProperties.EndpointLimit ep =
+                scene == RateLimitScene.ISSUE_TOKEN ? seckillRateLimitConfigProperties.getIssue() :
+                        seckillRateLimitConfigProperties.getSeckill();
+        Integer v = ep != null ? ep.getUserWindowMillis() : null;
+        return v != null ? v : seckillRateLimitConfigProperties.getUserWindowMills();
+    }
+
+    private int resolveUserMaxAttempts(RateLimitScene scene) {
+        SeckillRateLimitConfigProperties.EndpointLimit ep =
+                scene == RateLimitScene.ISSUE_TOKEN ? seckillRateLimitConfigProperties.getIssue() :
+                        seckillRateLimitConfigProperties.getSeckill();
+        Integer v = ep != null ? ep.getUserMaxAttempts() : null;
+        return v != null ? v : seckillRateLimitConfigProperties.getUserMaxAttempts();
     }
 
     private void checkBans(Long voucherId, Long userId, String clientIp) {
