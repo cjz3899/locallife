@@ -1,10 +1,16 @@
 package com.junzhecai.context;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class RateLimitContext {
     private Long voucherId;
 
@@ -24,5 +30,5 @@ public class RateLimitContext {
 
     private Integer userLimitMaxAttempts;
 
-    private boolean result;
+    private Integer result;
 }

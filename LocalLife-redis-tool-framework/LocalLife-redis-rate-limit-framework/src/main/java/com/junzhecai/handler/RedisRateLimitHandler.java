@@ -2,6 +2,7 @@ package com.junzhecai.handler;
 
 import cn.hutool.core.util.StrUtil;
 import com.junzhecai.config.SeckillRateLimitConfigProperties;
+import com.junzhecai.context.RateLimitContext;
 import com.junzhecai.context.RateLimitScene;
 import com.junzhecai.core.RedisKeyManage;
 import com.junzhecai.enums.BaseCode;
@@ -49,6 +50,42 @@ public class RedisRateLimitHandler implements RateLimitHandler {
         List<String> keys = buildRateLimitKeys(voucherId, userId, clientIp, userSliding);
         //构建lua中的数据
         String[] args = buildArgs(ipLimitWindowMills, ipLimitMaxAttempts, userLimitWindowMills, userLimitMaxAttempts);
+
+        RateLimitContext context = buildContext(voucherId, userId, clientIp, keys, userSliding, ipLimitWindowMills, ipLimitMaxAttempts, userLimitWindowMills, userLimitMaxAttempts);
+
+        //执行限流，在lua中执行滑动窗口或者令牌的限流
+        Integer result = executeLua(userSliding, keys, args);
+        context.setResult(result);
+
+
+    }
+
+    private void handleResult(RateLimitContext context) {
+        Integer result = context.getResult();
+        if (BaseCode.SUCCESS.getCode().equals(result)) {
+
+        }
+    }
+
+    private Integer executeLua(Boolean userSliding, List<String> keys, String[] args) {
+        return userSliding ? rateLimitSlidingOperate.execute(keys, args).intValue() : tokenBucketRateLimitOperate.execute(keys, args).intValue();
+    }
+
+    private RateLimitContext buildContext(Long voucherId, Long userId, String clientIp,
+                                          List<String> keys, boolean userSliding,
+                                          int ipLimitWindowMills, int ipLimitMaxAttempts,
+                                          int userLimitWindowMills, int userLimitMaxAttempts) {
+        return RateLimitContext.builder()
+                .voucherId(voucherId)
+                .userId(userId)
+                .clientIp(clientIp)
+                .keys(keys)
+                .userSliding(userSliding)
+                .ipLimitWindowMills(ipLimitWindowMills)
+                .ipLimitMaxAttempts(ipLimitMaxAttempts)
+                .userLimitWindowMills(userLimitWindowMills)
+                .userLimitMaxAttempts(userLimitMaxAttempts)
+                .build();
     }
 
     private String[] buildArgs(int ipLimitWindowMills, int ipLimitMaxAttempts, int userLimitWindowMills, int userLimitMaxAttempts) {
