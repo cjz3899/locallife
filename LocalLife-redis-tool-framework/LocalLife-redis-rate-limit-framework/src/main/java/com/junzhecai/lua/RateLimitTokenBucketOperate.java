@@ -12,10 +12,10 @@ import java.util.List;
 
 @Slf4j
 @Getter
-public class TokenBucketRateLimitOperate {
+public class RateLimitTokenBucketOperate {
     private final RedisCache redisCache;
 
-    public TokenBucketRateLimitOperate(RedisCache redisCache) {
+    public RateLimitTokenBucketOperate(RedisCache redisCache) {
         this.redisCache = redisCache;
     }
 

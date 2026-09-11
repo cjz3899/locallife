@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 //分布式id配置
-public class IdGeneratorAutoConfig {
+public class IdGeneratorAutoConfiguration {
 
     @Bean
     public WorkAndDataCenterIdHandler workAndDataCenterIdHandler(StringRedisTemplate stringRedisTemplate) {

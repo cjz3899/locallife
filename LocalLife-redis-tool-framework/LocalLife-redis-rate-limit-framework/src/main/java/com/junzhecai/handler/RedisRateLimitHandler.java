@@ -8,7 +8,7 @@ import com.junzhecai.core.RedisKeyManage;
 import com.junzhecai.enums.BaseCode;
 import com.junzhecai.exception.LocalLifeFrameException;
 import com.junzhecai.lua.RateLimitSlidingOperate;
-import com.junzhecai.lua.TokenBucketRateLimitOperate;
+import com.junzhecai.lua.RateLimitTokenBucketOperate;
 import com.junzhecai.redis.RedisCache;
 import com.junzhecai.redis.RedisKeyBuild;
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,7 +25,7 @@ public class RedisRateLimitHandler implements RateLimitHandler {
     private final SeckillRateLimitConfigProperties seckillRateLimitConfigProperties;
     private final RedisCache redisCache;
     private final RateLimitSlidingOperate rateLimitSlidingOperate;
-    private final TokenBucketRateLimitOperate tokenBucketRateLimitOperate;
+    private final RateLimitTokenBucketOperate tokenBucketRateLimitOperate;
 
     @Override
     public void execute(Long voucherId, Long userId, RateLimitScene rateLimitScene) {
