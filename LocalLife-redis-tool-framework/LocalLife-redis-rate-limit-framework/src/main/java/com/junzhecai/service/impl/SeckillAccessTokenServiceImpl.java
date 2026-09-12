@@ -64,7 +64,7 @@ public class SeckillAccessTokenServiceImpl implements ISeckillAccessTokenService
     }
 
     @Override
-    public boolean validateAndConsumer(Long voucherId, Long userId, String token) {
+    public boolean validateAndConsume(Long voucherId, Long userId, String token) {
         String key = RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_ACCESS_TOKEN_TAG_KEY, voucherId, userId).getRelKey();
         boolean success = seckillAccessTokenOperate.validateAndConsume(key, token);
         if (success) {

@@ -3,6 +3,7 @@ package com.junzhecai.controller;
 import com.junzhecai.context.RateLimitScene;
 import com.junzhecai.dto.Result;
 import com.junzhecai.handler.RateLimitHandler;
+import com.junzhecai.service.ISeckillAccessTokenService;
 import com.junzhecai.service.IVoucherOrderService;
 import com.junzhecai.utils.UserHolder;
 import jakarta.annotation.Resource;
@@ -15,9 +16,19 @@ public class VoucherOrderController {
     private IVoucherOrderService voucherOrderService;
     @Resource
     private RateLimitHandler rateLimitHandler;
+    @Resource
+    private ISeckillAccessTokenService seckillAccessTokenService;
 
     @PostMapping("/seckill/{id}")
-    public Result<Long> seckillVoucher(@PathVariable("id") Long voucherId) {
+    public Result<Long> seckillVoucher(@PathVariable("id") Long voucherId,
+                                       @RequestParam(name = "accessToken", required = false) String accessToken) {
+        Long userId = UserHolder.getUser().getId();
+        rateLimitHandler.execute(voucherId, userId, RateLimitScene.SECKILL_ORDER);
+        if (seckillAccessTokenService.isEnabled()) {
+            if (accessToken != null || !seckillAccessTokenService.validateAndConsume(voucherId, userId, null)) {
+                return Result.fail("令牌检验失败或令牌已失效");
+            }
+        }
         return voucherOrderService.seckillVoucher(voucherId);
     }
 
@@ -25,7 +36,9 @@ public class VoucherOrderController {
     public Result<String> issueSeckillAccessToken(@PathVariable("id") Long voucherId) {
         Long userId = UserHolder.getUser().getId();
         rateLimitHandler.execute(voucherId, userId, RateLimitScene.ISSUE_TOKEN);
-        //申请令牌
-        return Result.ok("令牌申请成功");
+        String token = seckillAccessTokenService.issueAccessToken(voucherId, userId);
+        return Result.ok(token);
     }
+
+
 }

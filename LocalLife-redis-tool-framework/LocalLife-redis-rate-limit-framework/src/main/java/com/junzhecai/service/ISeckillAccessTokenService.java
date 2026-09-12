@@ -15,5 +15,5 @@ public interface ISeckillAccessTokenService {
     /**
      * 校验并消费令牌
      */
-    boolean validateAndConsumer(Long voucherId, Long userId, String token);
+    boolean validateAndConsume(Long voucherId, Long userId, String token);
 }
