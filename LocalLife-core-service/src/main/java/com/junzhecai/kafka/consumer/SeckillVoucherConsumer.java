@@ -195,7 +195,7 @@ public class SeckillVoucherConsumer extends AbstractConsumerHandler<SeckillVouch
                     return;
                 }
                 Long shopId = voucherFull.getShopId();
-                // yyyyMMdd
+                //格式化日期为yyyyMMdd
                 String day = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
                 RedisKeyBuild dailyKey = RedisKeyBuild.createRedisKey(
                         RedisKeyManage.SECKILL_SHOP_TOP_BUYERS_DAILY_TAG_KEY,

@@ -77,7 +77,6 @@ public class RedisVoucherData {
         args[7] = String.valueOf(changeQty);
         args[8] = String.valueOf(afterQty);
 
-        //
         Integer finalCode = luaRollbackWithResultCode(keys, args, retryMaxAttempts, initialBackoffMillis, maxBackoffMillis);
         boolean ok = BaseCode.SUCCESS.getCode().equals(finalCode);
         if (!ok) {
