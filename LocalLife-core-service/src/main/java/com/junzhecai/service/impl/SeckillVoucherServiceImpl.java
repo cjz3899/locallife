@@ -47,6 +47,8 @@ public class SeckillVoucherServiceImpl extends ServiceImpl<SeckillVoucherMapper,
     private SeckillVoucherLocalCache seckillVoucherLocalCache;
     @Resource
     private IVoucherService voucherService;
+    @Resource
+    private SeckillVoucherMapper seckillVoucherMapper;
 
     /**
      * 固定流程：
@@ -185,6 +187,6 @@ public class SeckillVoucherServiceImpl extends ServiceImpl<SeckillVoucherMapper,
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean rollbackStock(final Long voucherId) {
-        return false;
+        return seckillVoucherMapper.rollbackStock(voucherId) > 0;
     }
 }

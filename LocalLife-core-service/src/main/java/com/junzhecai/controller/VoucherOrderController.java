@@ -1,12 +1,14 @@
 package com.junzhecai.controller;
 
 import com.junzhecai.context.RateLimitScene;
+import com.junzhecai.dto.CancelVoucherOrderDto;
 import com.junzhecai.dto.Result;
 import com.junzhecai.handler.RateLimitHandler;
 import com.junzhecai.service.ISeckillAccessTokenService;
 import com.junzhecai.service.IVoucherOrderService;
 import com.junzhecai.utils.UserHolder;
 import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -40,5 +42,9 @@ public class VoucherOrderController {
         return Result.ok(token);
     }
 
+    @PostMapping("/cancel")
+    public Result<Boolean> cancel(@Valid @RequestBody CancelVoucherOrderDto cancelVoucherOrderDto) {
+        return Result.ok(voucherOrderService.cancel(cancelVoucherOrderDto));
+    }
 
 }
