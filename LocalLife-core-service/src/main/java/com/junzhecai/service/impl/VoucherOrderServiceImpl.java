@@ -190,11 +190,27 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 
     @Override
     public Long getSeckillVoucherOrder(GetVoucherOrderDto getVoucherOrderDto) {
+        VoucherOrder voucherOrder = redisCache.get(RedisKeyBuild.createRedisKey(RedisKeyManage.DB_SECKILL_ORDER_KEY, getVoucherOrderDto.getOrderId()), VoucherOrder.class);
+        if (Objects.nonNull(voucherOrder)) {
+            return voucherOrder.getId();
+        }
+        VoucherOrderRouter one = voucherOrderRouterService.lambdaQuery().eq(VoucherOrderRouter::getOrderId, getVoucherOrderDto.getOrderId()).one();
+        if (Objects.nonNull(one)) {
+            return one.getOrderId();
+        }
         return null;
     }
 
     @Override
     public Long getSeckillVoucherOrderIdByVoucherId(GetVoucherOrderByVoucherIdDto getVoucherOrderByVoucherIdDto) {
+        VoucherOrder voucherOrder = lambdaQuery()
+                .eq(VoucherOrder::getUserId, UserHolder.getUser().getId())
+                .eq(VoucherOrder::getVoucherId, getVoucherOrderByVoucherIdDto.getVoucherId())
+                .eq(VoucherOrder::getStatus, OrderStatus.NORMAL.getCode())
+                .one();
+        if (Objects.nonNull(voucherOrder)) {
+            return voucherOrder.getId();
+        }
         return null;
     }
 
@@ -327,7 +343,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
                 log.error("自动发券失败，voucherId={}", voucherOrder.getVoucherId(), e);
             }
         }
-        return false;
+        return result;
     }
 
 

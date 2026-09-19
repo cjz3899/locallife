@@ -2,8 +2,11 @@ package com.junzhecai.controller;
 
 import com.junzhecai.context.RateLimitScene;
 import com.junzhecai.dto.CancelVoucherOrderDto;
+import com.junzhecai.dto.GetVoucherOrderByVoucherIdDto;
+import com.junzhecai.dto.GetVoucherOrderDto;
 import com.junzhecai.dto.Result;
 import com.junzhecai.handler.RateLimitHandler;
+import com.junzhecai.service.IReconciliationTaskService;
 import com.junzhecai.service.ISeckillAccessTokenService;
 import com.junzhecai.service.IVoucherOrderService;
 import com.junzhecai.utils.UserHolder;
@@ -20,6 +23,8 @@ public class VoucherOrderController {
     private RateLimitHandler rateLimitHandler;
     @Resource
     private ISeckillAccessTokenService seckillAccessTokenService;
+    @Resource
+    private IReconciliationTaskService reconciliationTaskService;
 
     @PostMapping("/seckill/{id}")
     public Result<Long> seckillVoucher(@PathVariable("id") Long voucherId,
@@ -47,4 +52,19 @@ public class VoucherOrderController {
         return Result.ok(voucherOrderService.cancel(cancelVoucherOrderDto));
     }
 
+    @PostMapping("/seckill/voucher/order-id")
+    public Result<Long> getSeckillVoucherOrder(@Valid @RequestBody GetVoucherOrderDto getVoucherOrderDto) {
+        return Result.ok(voucherOrderService.getSeckillVoucherOrder(getVoucherOrderDto));
+    }
+
+    @PostMapping("/seckill/voucher/order-id/by/voucher-id")
+    public Result<Long> getSeckillVoucherOrderIdByVoucherId(@Valid @RequestBody GetVoucherOrderByVoucherIdDto getVoucherOrderByVoucherIdDto) {
+        return Result.ok(voucherOrderService.getSeckillVoucherOrderIdByVoucherId(getVoucherOrderByVoucherIdDto));
+    }
+
+    @PostMapping("/reconciliation/task/all")
+    public Result<Void> reconciliationTaskAll() {
+        reconciliationTaskService.reconciliationTaskExecute();
+        return Result.ok();
+    }
 }

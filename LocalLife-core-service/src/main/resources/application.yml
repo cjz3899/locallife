@@ -36,7 +36,10 @@ spring:
       #默认的消费组ID
       group-id: create_voucher_order
       #是否自动提交offset - 改为自动提交
-      enable-auto-commit: true
+      # enable-auto-commit: true
+      #改为手动提交
+      enable-auto-commit: false
+    listener:
       #提交offset延时
       auto-commit-interval: 200
       # 当kafka中没有初始offset或offset超出范围时将自动重置offset
@@ -46,6 +49,8 @@ spring:
       auto-offset-reset: latest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      #手动立即提交：只有显示调用acknowledge()方法时才提交
+      ack-count: manual_immediate
 mybatis-plus:
   type-aliases-package: com.junzhecai.entity # 别名扫描包
   configuration:

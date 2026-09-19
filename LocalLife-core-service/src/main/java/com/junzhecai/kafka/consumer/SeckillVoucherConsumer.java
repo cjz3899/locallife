@@ -120,6 +120,7 @@ public class SeckillVoucherConsumer extends AbstractConsumerHandler<SeckillVouch
                           @Header(name = KafkaHeaders.RECEIVED_KEY, required = false) String key,
                           Acknowledgment acknowledgment) {
         consumeRaw(value, key, headers);
+        //只有业务成功返回，才ack
         if (acknowledgment != null) {
             acknowledgment.acknowledge();
         }

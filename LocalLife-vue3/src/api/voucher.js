@@ -7,19 +7,18 @@ export const issueSeckillAccessToken = (id) =>
 
 // 携带令牌进行秒杀下单
 export const seckillVoucher = (id, accessToken) =>
-  request.post(`/voucher-order/seckill/${id}`,
-    null,
-    { params: { accessToken } }
-  )
+  request.post(`/voucher-order/seckill/${id}`, null, {
+    params: { accessToken }
+  })
 // 轮询查询秒杀订单是否生成
 export const getSeckillOrderId = (orderId) =>
-  request.post('/voucher-order/get/seckill/voucher/order-id', {
+  request.post('/voucher-order/seckill/voucher/order-id', {
     orderId: String(orderId)
   })
 
 // 进入页面或秒杀成功后，查询用户是否已购买该优惠券
 export const getVoucherOrderIdByVoucherId = (voucherId) =>
-  request.post('/voucher-order/get/seckill/voucher/order-id/by/voucher-id', {
+  request.post('/voucher-order/seckill/voucher/order-id/by/voucher-id', {
     voucherId: String(voucherId)
   })
 
