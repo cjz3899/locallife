@@ -2,6 +2,7 @@ package com.junzhecai.config;
 
 import com.junzhecai.context.DelayQueueBasePart;
 import com.junzhecai.context.DelayQueueContext;
+import com.junzhecai.event.DelayQueueInitHandler;
 import org.redisson.api.RedissonClient;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -16,5 +17,10 @@ public class DelayQueueAutoConfiguration {
     @Bean
     public DelayQueueContext delayQueueContext(DelayQueueBasePart delayQueueBasePart) {
         return new DelayQueueContext(delayQueueBasePart);
+    }
+
+    @Bean
+    public DelayQueueInitHandler delayQueueInitHandler(DelayQueueBasePart delayQueueBasePart) {
+        return new DelayQueueInitHandler(delayQueueBasePart);
     }
 }
