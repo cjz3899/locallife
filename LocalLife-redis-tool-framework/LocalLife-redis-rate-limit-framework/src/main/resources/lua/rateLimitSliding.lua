@@ -37,7 +37,7 @@ local function uniqueMember(baseKey, ts)
     local seq = redis.call('INCR', seqKey)
     -- 给序列key设置一个较短过期，避免长时间占用
     if seq == 1 then
-        redis.call('EXPIRE', seqKey, 600000)
+        redis.call('PEXPIRE', seqKey, 600000)
     end
     return tostring(ts) .. ':' .. tostring(seq)
 end

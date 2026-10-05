@@ -1,8 +1,8 @@
 package com.junzhecai.config;
 
-import jakarta.annotation.Resource;
 import com.junzhecai.utils.LoginInterceptor;
 import com.junzhecai.utils.RefreshTokenInterceptor;
+import jakarta.annotation.Resource;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;

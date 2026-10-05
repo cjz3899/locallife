@@ -1,4 +1,4 @@
-package com.junzhecai.context;
+package com.junzhecai.extension;
 
 public enum RateLimitScene {
     /**

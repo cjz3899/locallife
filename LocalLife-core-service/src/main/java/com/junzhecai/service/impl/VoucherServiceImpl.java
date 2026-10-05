@@ -155,7 +155,7 @@ public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> impl
                 .set("init_stock", newInitStock)
                 .set("update_time", LocalDateTimeUtil.now());
         seckillVoucherService.update(updateWrapper);
-        String oldRedisStockStr = redisCache.get(RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_VOUCHER_TAG_KEY, seckillVoucher.getVoucherId()), String.class);
+        String oldRedisStockStr = redisCache.get(RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_STOCK_TAG_KEY, updateSeckillVoucherStockDto.getVoucherId()), String.class);
         Integer newRedisStock = null;
         if (StrUtil.isBlank(oldRedisStockStr)) {
             redisCache.set(RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_STOCK_TAG_KEY, seckillVoucher.getVoucherId()), String.valueOf(newStock));

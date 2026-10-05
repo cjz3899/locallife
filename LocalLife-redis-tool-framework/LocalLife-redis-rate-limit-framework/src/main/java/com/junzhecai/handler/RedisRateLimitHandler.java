@@ -2,11 +2,13 @@ package com.junzhecai.handler;
 
 import cn.hutool.core.util.StrUtil;
 import com.junzhecai.config.SeckillRateLimitConfigProperties;
-import com.junzhecai.context.RateLimitContext;
-import com.junzhecai.context.RateLimitScene;
 import com.junzhecai.core.RedisKeyManage;
 import com.junzhecai.enums.BaseCode;
 import com.junzhecai.exception.LocalLifeFrameException;
+import com.junzhecai.extension.RateLimitContext;
+import com.junzhecai.extension.RateLimitEventListener;
+import com.junzhecai.extension.RateLimitPenaltyPolicy;
+import com.junzhecai.extension.RateLimitScene;
 import com.junzhecai.lua.RateLimitSlidingOperate;
 import com.junzhecai.lua.RateLimitTokenBucketOperate;
 import com.junzhecai.redis.RedisCache;
@@ -26,6 +28,9 @@ public class RedisRateLimitHandler implements RateLimitHandler {
     private final RedisCache redisCache;
     private final RateLimitSlidingOperate rateLimitSlidingOperate;
     private final RateLimitTokenBucketOperate tokenBucketRateLimitOperate;
+    private final RateLimitEventListener rateLimitEventListener;
+    private final RateLimitPenaltyPolicy rateLimitPenaltyPolicy;
+
 
     @Override
     public void execute(Long voucherId, Long userId, RateLimitScene rateLimitScene) {
@@ -63,8 +68,20 @@ public class RedisRateLimitHandler implements RateLimitHandler {
     private void handleResult(RateLimitContext context) {
         Integer result = context.getResult();
         if (BaseCode.SUCCESS.getCode().equals(result)) {
-
+            rateLimitEventListener.onAllowed(context);
+            return;
         }
+        if (BaseCode.SECKILL_RATE_LIMIT_IP_EXCEEDED.getCode().equals(result)) {
+            rateLimitEventListener.onBlocked(context, BaseCode.SECKILL_RATE_LIMIT_IP_EXCEEDED);
+            rateLimitPenaltyPolicy.apply(context, BaseCode.SECKILL_RATE_LIMIT_IP_EXCEEDED);
+            throw new LocalLifeFrameException(BaseCode.SECKILL_RATE_LIMIT_IP_EXCEEDED);
+        }
+        if (BaseCode.SECKILL_RATE_LIMIT_USER_EXCEEDED.getCode().equals(result)) {
+            rateLimitEventListener.onBlocked(context, BaseCode.SECKILL_RATE_LIMIT_USER_EXCEEDED);
+            rateLimitPenaltyPolicy.apply(context, BaseCode.SECKILL_RATE_LIMIT_USER_EXCEEDED);
+            throw new LocalLifeFrameException(BaseCode.SECKILL_RATE_LIMIT_USER_EXCEEDED);
+        }
+        throw new LocalLifeFrameException("操作频繁，请稍后再试");
     }
 
     private Integer executeLua(Boolean userSliding, List<String> keys, String[] args) {
@@ -147,16 +164,16 @@ public class RedisRateLimitHandler implements RateLimitHandler {
 
     private void checkBans(Long voucherId, Long userId, String clientIp) {
         if (Objects.nonNull(clientIp)) {
-            Boolean ipBlocked = redisCache.hasKey(RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_BLOCK_IP_TAG_KEY));
+            boolean ipBlocked = Boolean.TRUE.equals(redisCache.hasKey(
+                    RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_BLOCK_IP_TAG_KEY, voucherId, clientIp)));
             if (ipBlocked) {
                 throw new LocalLifeFrameException(BaseCode.SECKILL_RATE_LIMIT_IP_EXCEEDED);
             }
         }
-        if (Objects.nonNull(userId)) {
-            Boolean userBlocked = redisCache.hasKey(RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_BLOCK_USER_TAG_KEY));
-            if (userBlocked) {
-                throw new LocalLifeFrameException(BaseCode.SECKILL_RATE_LIMIT_USER_EXCEEDED);
-            }
+        boolean userBlocked = Boolean.TRUE.equals(redisCache.hasKey(
+                RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_BLOCK_USER_TAG_KEY, voucherId, userId)));
+        if (userBlocked) {
+            throw new LocalLifeFrameException(BaseCode.SECKILL_RATE_LIMIT_USER_EXCEEDED);
         }
     }
 

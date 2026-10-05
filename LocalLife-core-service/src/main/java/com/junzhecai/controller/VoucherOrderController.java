@@ -1,10 +1,10 @@
 package com.junzhecai.controller;
 
-import com.junzhecai.context.RateLimitScene;
 import com.junzhecai.dto.CancelVoucherOrderDto;
 import com.junzhecai.dto.GetVoucherOrderByVoucherIdDto;
 import com.junzhecai.dto.GetVoucherOrderDto;
 import com.junzhecai.dto.Result;
+import com.junzhecai.extension.RateLimitScene;
 import com.junzhecai.handler.RateLimitHandler;
 import com.junzhecai.service.IReconciliationTaskService;
 import com.junzhecai.service.ISeckillAccessTokenService;
@@ -32,7 +32,7 @@ public class VoucherOrderController {
         Long userId = UserHolder.getUser().getId();
         rateLimitHandler.execute(voucherId, userId, RateLimitScene.SECKILL_ORDER);
         if (seckillAccessTokenService.isEnabled()) {
-            if (accessToken != null || !seckillAccessTokenService.validateAndConsume(voucherId, userId, null)) {
+            if (accessToken == null || !seckillAccessTokenService.validateAndConsume(voucherId, userId, null)) {
                 return Result.fail("令牌检验失败或令牌已失效");
             }
         }

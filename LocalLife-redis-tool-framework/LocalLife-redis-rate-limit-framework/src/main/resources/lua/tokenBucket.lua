@@ -48,7 +48,7 @@ local function tryConsume(bucketKey, windowMillis, maxAttempts)
         return true  -- 该维度未启用或配置非法：直接通过
     end
     -- 桶容量（突发上限）
-    local capacity = maxAttempt
+    local capacity = maxAttempts
     -- 平均令牌生成速率（每毫秒）
     local ratePerMs = maxAttempts / windowMillis
 
