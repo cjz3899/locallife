@@ -1,9 +1,12 @@
 package com.junzhecai.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.bean.copier.CopyOptions;
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.junzhecai.dto.LoginFormDTO;
 import com.junzhecai.dto.Result;
+import com.junzhecai.dto.UserDTO;
 import com.junzhecai.entity.User;
 import com.junzhecai.entity.UserInfo;
 import com.junzhecai.entity.UserPhone;
@@ -20,7 +23,12 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import static com.junzhecai.utils.RedisConstants.LOGIN_CODE_KEY;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+import static com.junzhecai.utils.RedisConstants.*;
 import static com.junzhecai.utils.SystemConstants.USER_NICK_NAME_PREFIX;
 
 @Slf4j
@@ -52,6 +60,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         return Result.ok();
     }
 
+    // TODO 为什么要加事务
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Result<String> login(LoginFormDTO loginForm, HttpSession session) {
@@ -68,6 +77,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         if (user == null) {
             user = createUserWithPhone(phone);
         }
+        String token = UUID.randomUUID().toString();
+        UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
+        Map<String, Object> userMap = BeanUtil.beanToMap(userDTO, new HashMap<>(),
+                CopyOptions.create()
+                        .setIgnoreNullValue(true)
+                        .setFieldValueEditor((fieldName, fieldValue) ->
+                                fieldValue == null ? null : fieldValue.toString()));
+        String tokenKey = LOGIN_USER_KEY + token;
+        stringRedisTemplate.opsForHash().putAll(tokenKey, userMap);
+        stringRedisTemplate.expire(tokenKey, LOGIN_USER_TTL, TimeUnit.MINUTES);
         return Result.ok();
     }
 
