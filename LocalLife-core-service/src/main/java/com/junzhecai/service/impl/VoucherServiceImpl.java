@@ -1,5 +1,6 @@
 package com.junzhecai.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.date.LocalDateTimeUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
@@ -13,6 +14,7 @@ import com.junzhecai.enums.BaseCode;
 import com.junzhecai.enums.StockUpdateType;
 import com.junzhecai.enums.SubscribeStatus;
 import com.junzhecai.exception.LocalLifeFrameException;
+import com.junzhecai.handler.BloomFilterHandlerFactory;
 import com.junzhecai.mapper.VoucherMapper;
 import com.junzhecai.redis.RedisCache;
 import com.junzhecai.redis.RedisKeyBuild;
@@ -21,6 +23,7 @@ import com.junzhecai.service.IVoucherOrderService;
 import com.junzhecai.service.IVoucherService;
 import com.junzhecai.servicelock.LockType;
 import com.junzhecai.servicelock.annotion.ServiceLock;
+import com.junzhecai.toolkit.SnowflakeIdGenerator;
 import com.junzhecai.utils.UserHolder;
 import com.junzhecai.vo.GetSubscribeStatusVo;
 import jakarta.annotation.Resource;
@@ -36,6 +39,7 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import static com.junzhecai.constant.Constant.BLOOM_FILTER_HANDLER_VOUCHER;
 import static com.junzhecai.constant.DistributedLockConstants.UPDATE_SECKILL_VOUCHER_STOCK_LOCK;
 import static com.junzhecai.service.impl.VoucherOrderServiceImpl.SECKILL_ORDER_EXECUTOR;
 
@@ -50,12 +54,21 @@ public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> impl
     private RedisCache redisCache;
     @Resource
     private IVoucherOrderService voucherOrderService;
+    @Resource
+    private SnowflakeIdGenerator snowflakeIdGenerator;
+    @Resource
+    private BloomFilterHandlerFactory bloomFilterHandlerFactory;
     @Value("${seckill.reminder.ahead.seconds:120}")
     private long reminderAheadSeconds;
 
     @Override
     public Long addVoucher(VoucherDto voucherDto) {
-        return null;
+        long newId = snowflakeIdGenerator.nextId();
+        Voucher voucher = BeanUtil.copyProperties(voucherDto, Voucher.class);
+        voucher.setId(newId);
+        save(voucher);
+        bloomFilterHandlerFactory.get(BLOOM_FILTER_HANDLER_VOUCHER).add(voucher.getId().toString());
+        return voucher.getId();
     }
 
     @Override

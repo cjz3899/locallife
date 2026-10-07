@@ -24,6 +24,12 @@ public class VoucherController {
         return Result.ok(seckillVoucherService.queryByVoucherId(getSeckillVoucherDto.getVoucherId()));
     }
 
+    @PostMapping
+    public Result<Long> addVoucher(@Valid @RequestBody VoucherDto voucherDto) {
+        return Result.ok(voucherService.addVoucher(voucherDto));
+    }
+
+
     @PostMapping("/update/seckill")
     public Result<Void> updateSeckillVoucher(@Valid @RequestBody UpdateSeckillVoucherDto updateSeckillVoucherDto) {
         voucherService.updateSeckillVoucher(updateSeckillVoucherDto);
