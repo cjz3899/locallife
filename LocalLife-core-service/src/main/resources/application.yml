@@ -15,6 +15,7 @@ spring:
       database: 0
       host: 127.0.0.1
       port: 6379
+      password: cjz20060820
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
@@ -50,7 +51,7 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       #手动立即提交：只有显示调用acknowledge()方法时才提交
-      ack-count: manual_immediate
+      ack-mode: manual_immediate
 mybatis-plus:
   type-aliases-package: com.junzhecai.entity # 别名扫描包
   configuration:
