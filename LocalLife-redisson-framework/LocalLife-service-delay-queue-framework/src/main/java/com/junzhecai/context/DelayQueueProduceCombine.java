@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 延迟队列 发送者 分片选择
+ * 延迟队列生产端组合器，按隔离区域分片将消息投递到对应的延迟队列
  */
 public class DelayQueueProduceCombine {
     private final IsolationRegionSelector isolationRegionSelector;
@@ -24,7 +24,9 @@ public class DelayQueueProduceCombine {
     }
 
     public void offer(String content, long delayTime, TimeUnit timeUnit) {
+        //通过选择器获取索引，分区投递
         int index = isolationRegionSelector.getIndex();
+        //将消息投递到对应的延迟队列
         delayProduceQueueList.get(index).offer(content, delayTime, timeUnit);
     }
 }

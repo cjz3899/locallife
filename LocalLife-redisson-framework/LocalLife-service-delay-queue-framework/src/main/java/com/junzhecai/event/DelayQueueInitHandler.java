@@ -11,6 +11,10 @@ import org.springframework.context.ApplicationListener;
 
 import java.util.Map;
 
+/**
+ * 事件监听器，监听ApplicationStartedEvent事件，在应用启动完成后初始化延迟队列
+ * 相当于@PostConstruct注解
+ */
 @AllArgsConstructor
 public class DelayQueueInitHandler implements ApplicationListener<ApplicationStartedEvent> {
 

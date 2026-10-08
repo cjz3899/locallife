@@ -14,14 +14,29 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class DelayConsumerQueue extends DelayBaseQueue {
 
+    /**
+     * 监听消息线程数
+     */
     private final AtomicInteger listenStartThreadCount = new AtomicInteger(1);
 
+    /**
+     * 消费消息线程数
+     */
     private final AtomicInteger executeTaskThreadCount = new AtomicInteger(1);
 
+    /**
+     * 监听消息的线程池
+     */
     private final ThreadPoolExecutor listenStartThreadPool;
 
+    /**
+     * 消费消息的线程池
+     */
     private final ThreadPoolExecutor executeTaskThreadPool;
 
+    /**
+     * 监控消费启动标识
+     */
     private final AtomicBoolean runFlag = new AtomicBoolean(false);
 
     private final ConsumerTask consumerTask;
@@ -42,14 +57,21 @@ public class DelayConsumerQueue extends DelayBaseQueue {
         this.consumerTask = delayQueuePart.getConsumerTask();
     }
 
+    /**
+     * 启动消息监听
+     */
     public synchronized void listenStart() {
         if (!runFlag.get()) {
             runFlag.set(true);
+            //异步执行监听逻辑
             listenStartThreadPool.execute(() -> {
                 while (!Thread.interrupted()) {
                     try {
-                        assert blockingQueue != null;
+                        if (blockingQueue == null) {
+                            throw new IllegalStateException("blockingQueue 未初始化");
+                        }
                         String content = blockingQueue.take();
+                        //监听到消息，执行处理逻辑
                         executeTaskThreadPool.execute(() -> {
                             try {
                                 consumerTask.execute(content);
