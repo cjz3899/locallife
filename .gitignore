@@ -74,5 +74,8 @@ Thumbs.db
 # ===== IDE 生成的文档 =====
 HELP.md
 
+# ===== 图片上传目录 =====
+upload/
+
 # ===== 其他 =====
 CLAUDE.md

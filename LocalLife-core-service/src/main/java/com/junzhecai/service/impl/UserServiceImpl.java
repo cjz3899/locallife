@@ -17,7 +17,6 @@ import com.junzhecai.service.IUserService;
 import com.junzhecai.toolkit.SnowflakeIdGenerator;
 import com.junzhecai.utils.RegexUtils;
 import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -48,14 +47,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     private IUserPhoneService userPhoneService;
 
     @Override
-    public Result<String> sendCode(String phone, HttpSession session) {
+    public Result<String> sendCode(String phone) {
         //校验手机号
         if (RegexUtils.isPhoneInvalid(phone)) {
             return Result.fail("手机号格式错误");
         }
         String code = RandomUtil.randomNumbers(6);
-        //将生成的验证码保存到session中
-        session.setAttribute("code", code);
+        // 验证码存 Redis，多实例部署下任意实例均可校验
+        stringRedisTemplate.opsForValue().set(LOGIN_CODE_KEY + phone, code, LOGIN_CODE_TTL, TimeUnit.MINUTES);
         log.debug("发送短信验证码成功，验证码：{}", code);
         return Result.ok();
     }
@@ -63,7 +62,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     // TODO 为什么要加事务
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Result<String> login(LoginFormDTO loginForm, HttpSession session) {
+    public Result<String> login(LoginFormDTO loginForm) {
         String phone = loginForm.getPhone();
         if (RegexUtils.isPhoneInvalid(phone)) {
             return Result.fail("手机号格式错误");

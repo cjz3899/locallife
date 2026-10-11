@@ -50,9 +50,12 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:8081',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
+        target: 'http://localhost:8088',
+        changeOrigin: true
+      },
+      '/imgs': {
+        target: 'http://localhost:8088',
+        changeOrigin: true
       }
     }
   }

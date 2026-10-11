@@ -73,6 +73,10 @@ bloom-filter:
       name: voucher-id-bloom
       expected-insertions: 100000
       false-probability: 0.01
+app:
+  # 图片上传存储目录（需与 nginx 的 /imgs alias 指向同一目录）
+  upload-dir: /Users/caijunzhe/Desktop/LocalLife/upload/imgs
+
 management:
   endpoints:
     web:
