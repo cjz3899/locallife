@@ -160,9 +160,9 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         }
         // 4.解析数据：blogId、minTime（时间戳）、offset
         List<Long> ids = new ArrayList<>(typedTuples.size());
-        long minTime = 0; // 2
-        int os = 1; // 2
-        for (ZSetOperations.TypedTuple<String> tuple : typedTuples) { // 5 4 4 2 2
+        long minTime = 0; // 本批次中最小的时间戳 → 下一页的 max
+        int os = 1; // 该时间戳内已取到第几条 → 下一页的 offset
+        for (ZSetOperations.TypedTuple<String> tuple : typedTuples) {
             // 4.1.获取id
             ids.add(Long.valueOf(tuple.getValue()));
             // 4.2.获取分数(时间戳）
@@ -189,8 +189,8 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         // 6.封装并返回
         ScrollResult r = new ScrollResult();
         r.setList(blogs);
-        r.setOffset(os);
-        r.setMinTime(minTime);
+        r.setOffset(os);// 下一页的 offset
+        r.setMinTime(minTime);// 下一页的 max
 
         return Result.ok(r);
     }
