@@ -2,8 +2,10 @@ package com.junzhecai.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.bean.copier.CopyOptions;
+import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.junzhecai.core.RedisKeyManage;
 import com.junzhecai.dto.LoginFormDTO;
 import com.junzhecai.dto.Result;
 import com.junzhecai.dto.UserDTO;
@@ -11,20 +13,26 @@ import com.junzhecai.entity.User;
 import com.junzhecai.entity.UserInfo;
 import com.junzhecai.entity.UserPhone;
 import com.junzhecai.mapper.UserMapper;
+import com.junzhecai.redis.RedisCache;
+import com.junzhecai.redis.RedisKeyBuild;
 import com.junzhecai.service.IUserInfoService;
 import com.junzhecai.service.IUserPhoneService;
 import com.junzhecai.service.IUserService;
 import com.junzhecai.toolkit.SnowflakeIdGenerator;
 import com.junzhecai.utils.RegexUtils;
+import com.junzhecai.utils.UserHolder;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.connection.BitFieldSubCommands;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static com.junzhecai.utils.RedisConstants.*;
@@ -46,6 +54,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     @Resource
     private IUserPhoneService userPhoneService;
 
+    @Resource
+    private RedisCache redisCache;
+
     @Override
     public Result<String> sendCode(String phone) {
         //校验手机号
@@ -55,38 +66,66 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         String code = RandomUtil.randomNumbers(6);
         // 验证码存 Redis，多实例部署下任意实例均可校验
         stringRedisTemplate.opsForValue().set(LOGIN_CODE_KEY + phone, code, LOGIN_CODE_TTL, TimeUnit.MINUTES);
-        log.debug("发送短信验证码成功，验证码：{}", code);
-        return Result.ok();
+        log.info("发送短信验证码成功，验证码：{}", code);
+        return Result.ok(code);
     }
 
     // TODO 为什么要加事务
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Result<String> login(LoginFormDTO loginForm) {
+        // 1.校验手机号
         String phone = loginForm.getPhone();
         if (RegexUtils.isPhoneInvalid(phone)) {
-            return Result.fail("手机号格式错误");
+            // 2.如果不符合，返回错误信息
+            return Result.fail("手机号格式错误！");
         }
+        // 3.从redis获取验证码并校验
         String cacheCode = stringRedisTemplate.opsForValue().get(LOGIN_CODE_KEY + phone);
         String code = loginForm.getCode();
         if (cacheCode == null || !cacheCode.equals(code)) {
+            // 不一致，报错
             return Result.fail("验证码错误");
         }
-        User user = query().eq("phone", phone).one();
-        if (user == null) {
+
+        // 4.根据手机号查询用户
+        UserPhone userPhone = userPhoneService.lambdaQuery().eq(UserPhone::getPhone, phone).one();
+
+        User user = null;
+        // 5.判断用户是否存在
+        if (userPhone == null) {
+            // 6.不存在，创建新用户并保存
             user = createUserWithPhone(phone);
+        } else {
+            user = lambdaQuery().eq(User::getPhone, userPhone.getPhone()).one();
         }
-        String token = UUID.randomUUID().toString();
+
+        // 7.保存用户信息到 redis中
+        // 7.1.随机生成token，作为登录令牌
+        String token = UUID.randomUUID().toString(true);
+        // 7.2.将User对象转为HashMap存储
         UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
         Map<String, Object> userMap = BeanUtil.beanToMap(userDTO, new HashMap<>(),
                 CopyOptions.create()
                         .setIgnoreNullValue(true)
-                        .setFieldValueEditor((fieldName, fieldValue) ->
-                                fieldValue == null ? null : fieldValue.toString()));
+                        .setFieldValueEditor((fieldName, fieldValue) -> fieldValue.toString()));
+        // 7.3.存储
         String tokenKey = LOGIN_USER_KEY + token;
         stringRedisTemplate.opsForHash().putAll(tokenKey, userMap);
-        stringRedisTemplate.expire(tokenKey, LOGIN_USER_TTL, TimeUnit.MINUTES);
-        return Result.ok();
+        // 7.4.设置token有效期（按秒设置，避免 Redisson pExpire 递归问题）
+        stringRedisTemplate.expire(
+                tokenKey,
+                TimeUnit.SECONDS.convert(LOGIN_USER_TTL, TimeUnit.MINUTES),
+                TimeUnit.SECONDS
+        );
+
+        // 8.返回token
+        try {
+            maintainLevelSetMembership(user.getId());
+        } catch (Exception e) {
+            // 忽略异常，避免影响登录
+        }
+        return Result.ok(token);
     }
 
     private User createUserWithPhone(String phone) {
@@ -114,17 +153,72 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         return user;
     }
 
-    private void maintainLevelSetMembership(Long id) {
-        return;
+    private void maintainLevelSetMembership(Long userId) {
+        if (userId == null) {
+            return;
+        }
+        UserInfo info = userInfoService.lambdaQuery().eq(UserInfo::getUserId, userId).one();
+        if (info == null || info.getLevel() == null || info.getLevel() <= 0) {
+            return;
+        }
+        Integer level = info.getLevel();
+        redisCache.addForSet(
+                RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_USER_LEVEL_MEMBERS_TAG_KEY, level),
+                userId
+        );
     }
 
     @Override
     public Result<Void> sign() {
-        return null;
+        // 1.获取当前登录用户
+        Long userId = UserHolder.getUser().getId();
+        // 2.获取日期
+        LocalDateTime now = LocalDateTime.now();
+        // 3.拼接key
+        String keySuffix = now.format(DateTimeFormatter.ofPattern(":yyyyMM"));
+        String key = USER_SIGN_KEY + userId + keySuffix;
+        // 4.获取今天是本月的第几天
+        int dayOfMonth = now.getDayOfMonth();
+        // 5.写入Redis SETBIT key offset 1
+        stringRedisTemplate.opsForValue().setBit(key, dayOfMonth - 1, true);
+        return Result.ok();
     }
 
     @Override
     public Result<Integer> signCount() {
-        return null;
+        // 1.获取当前登录用户
+        Long userId = UserHolder.getUser().getId();
+        // 2.获取日期
+        LocalDateTime now = LocalDateTime.now();
+        // 3.拼接key
+        String keySuffix = now.format(DateTimeFormatter.ofPattern(":yyyyMM"));
+        String key = USER_SIGN_KEY + userId + keySuffix;
+        // 4.获取今天是本月的第几天
+        int dayOfMonth = now.getDayOfMonth();
+        // 5.获取本月截止今天为止的所有的签到记录，返回的是一个十进制的数字 BITFIELD sign:5:202203 GET u14 0
+        List<Long> result = stringRedisTemplate.opsForValue().bitField(
+                key,
+                BitFieldSubCommands.create()
+                        .get(BitFieldSubCommands.BitFieldType.unsigned(dayOfMonth)).valueAt(0)
+        );
+        if (result == null || result.isEmpty()) {
+            // 没有任何签到结果
+            return Result.ok(0);
+        }
+        Long num = result.get(0);
+        if (num == null || num == 0) {
+            return Result.ok(0);
+        }
+        // 6.循环遍历
+        int count = 0;
+        // 如果为0，说明未签到，结束
+        // 如果不为0，说明已签到，计数器+1
+        while ((num & 1) != 0) {
+            // 6.1.让这个数字与1做与运算，得到数字的最后一个bit位  // 判断这个bit位是否为0
+            count++;
+            // 把数字右移一位，抛弃最后一个bit位，继续下一个bit位
+            num >>>= 1;
+        }
+        return Result.ok(count);
     }
 }
