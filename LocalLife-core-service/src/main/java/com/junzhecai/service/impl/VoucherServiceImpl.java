@@ -3,10 +3,14 @@ package com.junzhecai.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.date.LocalDateTimeUtil;
 import cn.hutool.core.util.StrUtil;
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.junzhecai.cache.SeckillVoucherCacheInvalidationPublisher;
+import com.junzhecai.context.DelayQueueContext;
 import com.junzhecai.core.RedisKeyManage;
+import com.junzhecai.core.SpringUtil;
+import com.junzhecai.delay.message.DelayedVoucherReminderMessage;
 import com.junzhecai.dto.*;
 import com.junzhecai.entity.SeckillVoucher;
 import com.junzhecai.entity.Voucher;
@@ -32,6 +36,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +45,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import static com.junzhecai.constant.Constant.BLOOM_FILTER_HANDLER_VOUCHER;
+import static com.junzhecai.constant.Constant.DELAY_VOUCHER_REMINDER;
 import static com.junzhecai.constant.DistributedLockConstants.UPDATE_SECKILL_VOUCHER_STOCK_LOCK;
 import static com.junzhecai.service.impl.VoucherOrderServiceImpl.SECKILL_ORDER_EXECUTOR;
 
@@ -60,6 +66,8 @@ public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> impl
     private BloomFilterHandlerFactory bloomFilterHandlerFactory;
     @Value("${seckill.reminder.ahead.seconds:120}")
     private long reminderAheadSeconds;
+    @Resource
+    private DelayQueueContext delayQueueContext;
 
     @Override
     public Long addVoucher(VoucherDto voucherDto) {
@@ -79,7 +87,7 @@ public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long addSeckillVoucher(SeckillVoucherDto seckillVoucherDto) {
-        return null;
+        return doAddSeckillVoucherV2(seckillVoucherDto);
     }
 
     @Override
@@ -340,6 +348,83 @@ public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> impl
 
     @Override
     public void delayVoucherReminder(DelayVoucherReminderDto delayVoucherReminderDto) {
+        SeckillVoucher seckillVoucher = seckillVoucherService.lambdaQuery().eq(SeckillVoucher::getVoucherId,
+                delayVoucherReminderDto.getVoucherId()).one();
+        if (Objects.isNull(seckillVoucher)) {
+            throw new LocalLifeFrameException(BaseCode.SECKILL_VOUCHER_NOT_EXIST);
+        }
+        DelayedVoucherReminderMessage msg = new DelayedVoucherReminderMessage(
+                seckillVoucher.getVoucherId(),
+                seckillVoucher.getBeginTime()
+        );
+        String content = JSON.toJSONString(msg);
+        String topic = SpringUtil.getPrefixDistinctionName() + "-" + DELAY_VOUCHER_REMINDER;
+        Integer delaySeconds = delayVoucherReminderDto.getDelaySeconds();
+        delayQueueContext.sendMessage(topic, content, delayVoucherReminderDto.getDelaySeconds(), TimeUnit.SECONDS);
+        log.info("[测试延迟发送] 已调度提醒消息 voucherId={} delaySeconds={} topic={}", seckillVoucher.getVoucherId(), delaySeconds, topic);
+    }
 
+
+    private Long doAddSeckillVoucherV2(SeckillVoucherDto seckillVoucherDto) {
+        VoucherDto voucherDto = new VoucherDto();
+        BeanUtil.copyProperties(seckillVoucherDto, voucherDto);
+        Long voucherId = addVoucher(voucherDto);
+        SeckillVoucher seckillVoucher = new SeckillVoucher();
+        seckillVoucher.setId(snowflakeIdGenerator.nextId());
+        seckillVoucher.setVoucherId(voucherId);
+        seckillVoucher.setInitStock(seckillVoucherDto.getStock());
+        seckillVoucher.setStock(seckillVoucherDto.getStock());
+        seckillVoucher.setBeginTime(seckillVoucherDto.getBeginTime());
+        seckillVoucher.setEndTime(seckillVoucherDto.getEndTime());
+        seckillVoucher.setAllowedLevels(seckillVoucherDto.getAllowedLevels());
+        seckillVoucher.setMinLevel(seckillVoucherDto.getMinLevel());
+        seckillVoucherService.save(seckillVoucher);
+        long ttlSeconds = Math.max(
+                LocalDateTimeUtil.between(LocalDateTimeUtil.now(), seckillVoucher.getEndTime()).getSeconds(),
+                1L
+        );
+        redisCache.set(
+                RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_STOCK_TAG_KEY, voucherId),
+                String.valueOf(seckillVoucher.getStock()),
+                ttlSeconds,
+                TimeUnit.SECONDS
+        );
+        seckillVoucher.setStock(null);
+        redisCache.set(
+                RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_VOUCHER_TAG_KEY, voucherId),
+                seckillVoucher,
+                ttlSeconds,
+                TimeUnit.SECONDS
+        );
+        sendDelayedVoucherReminder(seckillVoucher);
+        return voucherId;
+    }
+
+    public void sendDelayedVoucherReminder(SeckillVoucher seckillVoucher) {
+        LocalDateTime beginTime = seckillVoucher.getBeginTime();
+        if (beginTime == null) {
+            log.warn("[DELAY_REMINDER] beginTime为空，跳过调度 voucherId={}", seckillVoucher.getVoucherId());
+            return;
+        }
+        long secondsUntilBegin = Math.max(
+                LocalDateTimeUtil.between(LocalDateTimeUtil.now(), beginTime).getSeconds(),
+                0L
+        );
+        long delaySeconds = secondsUntilBegin - Math.max(reminderAheadSeconds, 0L);
+        if (delaySeconds <= 0) {
+            log.info("[DELAY_REMINDER] beginTime过近或已开始，不进行延迟调度 voucherId={} beginTime={} delaySeconds={}",
+                    seckillVoucher.getVoucherId(), beginTime, delaySeconds);
+            return;
+        }
+
+        DelayedVoucherReminderMessage msg = new DelayedVoucherReminderMessage(
+                seckillVoucher.getVoucherId(),
+                beginTime
+        );
+        String content = JSON.toJSONString(msg);
+
+        String topic = SpringUtil.getPrefixDistinctionName() + "-" + DELAY_VOUCHER_REMINDER;
+        delayQueueContext.sendMessage(topic, content, delaySeconds, TimeUnit.SECONDS);
+        log.info("[DELAY_REMINDER] 已调度提醒消息 voucherId={} delaySeconds={} topic={}", seckillVoucher.getVoucherId(), delaySeconds, topic);
     }
 }

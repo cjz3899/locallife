@@ -1,6 +1,7 @@
 package com.junzhecai.controller;
 
 import com.junzhecai.dto.*;
+import com.junzhecai.entity.Voucher;
 import com.junzhecai.model.SeckillVoucherFullModel;
 import com.junzhecai.service.ISeckillVoucherService;
 import com.junzhecai.service.IVoucherService;
@@ -27,6 +28,17 @@ public class VoucherController {
     @PostMapping
     public Result<Long> addVoucher(@Valid @RequestBody VoucherDto voucherDto) {
         return Result.ok(voucherService.addVoucher(voucherDto));
+    }
+
+    @PostMapping("/seckill")
+    public Result<Long> addSeckillVoucher(@Valid @RequestBody SeckillVoucherDto seckillVoucherDto) {
+        final Long voucherId = voucherService.addSeckillVoucher(seckillVoucherDto);
+        return Result.ok(voucherId);
+    }
+
+    @GetMapping("/list/{shopId}")
+    public Result<List<Voucher>> queryVoucherOfShop(@PathVariable("shopId") Long shopId) {
+        return voucherService.queryVoucherOfShop(shopId);
     }
 
 
@@ -62,5 +74,11 @@ public class VoucherController {
     @PostMapping("/get/subscribe/status/batch")
     public Result<List<GetSubscribeStatusVo>> getSubscribeStatusBatch(@Valid @RequestBody VoucherSubscribeBatchDto voucherSubscribeBatchDto) {
         return Result.ok(voucherService.getSubscribeStatusBatch(voucherSubscribeBatchDto));
+    }
+
+    @PostMapping("/delay/voucher/reminder")
+    public Result<Void> delayVoucherReminder(@Valid @RequestBody DelayVoucherReminderDto delayVoucherReminderDto) {
+        voucherService.delayVoucherReminder(delayVoucherReminderDto);
+        return Result.ok();
     }
 }
