@@ -1,5 +1,6 @@
 package com.junzhecai.init;
 
+import com.junzhecai.cache.BloomFilterHealthGuard;
 import com.junzhecai.entity.SeckillVoucher;
 import com.junzhecai.entity.Shop;
 import com.junzhecai.handler.BloomFilterHandlerFactory;
@@ -31,6 +32,9 @@ public class BloomFilterDataInit {
     @Autowired
     private BloomFilterHandlerFactory bloomFilterHandlerFactory;
 
+    @Autowired
+    private BloomFilterHealthGuard bloomFilterHealthGuard;
+
     @PostConstruct
     public void init() {
         log.info("==========初始化商铺的布隆过滤器==========");
@@ -42,6 +46,8 @@ public class BloomFilterDataInit {
         List<SeckillVoucher> seckillVoucherlist = seckillVoucherService.list();
         for (SeckillVoucher seckillVoucher : seckillVoucherlist) {
             bloomFilterHandlerFactory.get(BLOOM_FILTER_HANDLER_VOUCHER).add(String.valueOf(seckillVoucher.getVoucherId()));
+            //记录若干"确定已写入布隆过滤器"的样本，供健康守卫定时自检bitmap是否丢失
+            bloomFilterHealthGuard.markVoucher(seckillVoucher.getVoucherId());
         }
     }
 }

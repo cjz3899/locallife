@@ -124,8 +124,9 @@ public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> impl
             seckillVoucherService.update(seckillWrapper);
         }
         //更新后清理缓存，等待读路径按新数据重建缓存
+        //必须在事务提交之后执行：事务未提交就删缓存，会让并发读请求把未提交的旧值回填进缓存
         if (updatedVoucher || updatedSeckill) {
-            seckillVoucherCacheInvalidationPublisher.publishInvalidate(voucherId, "update");
+            seckillVoucherCacheInvalidationPublisher.publishInvalidateAfterCommit(voucherId, "update");
         }
     }
 
@@ -383,6 +384,7 @@ public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> impl
                 LocalDateTimeUtil.between(LocalDateTimeUtil.now(), seckillVoucher.getEndTime()).getSeconds(),
                 1L
         );
+        //将秒杀券的库存放入redis
         redisCache.set(
                 RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_STOCK_TAG_KEY, voucherId),
                 String.valueOf(seckillVoucher.getStock()),
@@ -390,12 +392,14 @@ public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> impl
                 TimeUnit.SECONDS
         );
         seckillVoucher.setStock(null);
+        //将秒杀券信息放入redis
         redisCache.set(
                 RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_VOUCHER_TAG_KEY, voucherId),
                 seckillVoucher,
                 ttlSeconds,
                 TimeUnit.SECONDS
         );
+        //根据秒杀优惠券的活动开始时间来延迟提醒用户有秒杀券
         sendDelayedVoucherReminder(seckillVoucher);
         return voucherId;
     }
@@ -406,10 +410,12 @@ public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> impl
             log.warn("[DELAY_REMINDER] beginTime为空，跳过调度 voucherId={}", seckillVoucher.getVoucherId());
             return;
         }
+        //计算距离开始时间还有多少秒
         long secondsUntilBegin = Math.max(
                 LocalDateTimeUtil.between(LocalDateTimeUtil.now(), beginTime).getSeconds(),
                 0L
         );
+        //计算延迟多少秒
         long delaySeconds = secondsUntilBegin - Math.max(reminderAheadSeconds, 0L);
         if (delaySeconds <= 0) {
             log.info("[DELAY_REMINDER] beginTime过近或已开始，不进行延迟调度 voucherId={} beginTime={} delaySeconds={}",

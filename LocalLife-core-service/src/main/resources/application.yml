@@ -85,4 +85,37 @@ management:
   endpoint:
     prometheus:
       enabled: true
-      
+
+seckill:
+  reminder:
+    ahead:
+      seconds: 120
+    # 去重窗口：同一用户在该时间范围内不重复提醒（秒）
+    dedup:
+      window:
+        seconds: 1800
+    notify:
+      sms:
+        enabled: false
+        # 短信提醒接收号码，多个用逗号分隔
+        to: ""
+      app:
+        enabled: false
+      # 优惠券未设置allowedLevels/minLevel时的默认最小会员等级
+      default:
+        minLevel: 1
+      # 每次提醒的最大用户数量，防止一次性通知过多
+      max:
+        users: 1000
+      # 是否附加通知"最近购买活跃用户"
+      top:
+        buyers:
+          enabled: true
+          # 统计最近多少天的购买行为
+          days: 30
+          # Top购买用户数量
+          count: 200
+      user:
+        # 最大会员等级
+        level:
+          max: 10

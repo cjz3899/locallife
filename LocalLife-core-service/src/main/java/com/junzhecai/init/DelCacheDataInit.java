@@ -44,9 +44,8 @@ public class DelCacheDataInit {
         }
         List<SeckillVoucher> seckillVoucherList = seckillVoucherService.list();
         for (final SeckillVoucher seckillVoucher : seckillVoucherList) {
-            RedisKeyBuild seckillVoucherRedisKey =
-                    RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_VOUCHER_TAG_KEY, seckillVoucher.getVoucherId());
-            seckillVoucherLocalCache.invalidate(seckillVoucherRedisKey.getRelKey());
+            //本地缓存需要同时清掉券主体和空值哨兵，保证与下面Redis侧的清理范围一致
+            seckillVoucherLocalCache.invalidateVoucher(seckillVoucher.getVoucherId());
             redisCache.del(RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_STOCK_TAG_KEY, seckillVoucher.getVoucherId()));
             redisCache.del(RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_USER_TAG_KEY, seckillVoucher.getVoucherId()));
             redisCache.del(RedisKeyBuild.createRedisKey(RedisKeyManage.SECKILL_VOUCHER_TAG_KEY, seckillVoucher.getVoucherId()));
